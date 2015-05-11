@@ -65,13 +65,13 @@ AC_SUBST([CC])
 #----------------------------------------------------------------------------
 AC_MSG_CHECKING([compiler and linker scripts sizes])
 AC_SUBST([cc_have_mixed_ss], [$ac_have_mixed_ss])
-AC_SUBST([cc_script_lines], [$(wc -l scripts/rootsim-cc.in | sed 's,\ .*,,g')])
-AC_SUBST([cc_hijacker_conf_lines], [$(wc -l scripts/hijacker-conf.xml | sed 's,\ .*,,g')])
+AC_SUBST([cc_script_lines], [$(wc -l script/abmcc.in | sed 's,\ .*,,g')])
+AC_SUBST([cc_hijacker_conf_lines], [$(wc -l script/hijacker-conf.xml | sed 's,\ .*,,g')])
 AC_MSG_RESULT([ok])
 
 
 # Generate Makefiles for all these subfolders
 #AC_OUTPUT
-AC_CONFIG_FILES([Makefile scripts/Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile script/Makefile src/Makefile])
 AC_OUTPUT
 
