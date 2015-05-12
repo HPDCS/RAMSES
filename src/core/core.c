@@ -22,6 +22,8 @@
 #include "message_state.h"
 #include "simtypes.h"
 
+#include "reverse.h"
+
 
 #define THROTTLING
 
@@ -54,6 +56,10 @@ __thread unsigned int tid = 0;
 __thread unsigned long long evt_count = 0;
 __thread unsigned long long evt_try_count = 0;
 __thread unsigned long long abort_count_conflict = 0, abort_count_safety = 0;
+
+unsigned int *lock_vector;			// Tells whether one region has been locked by some thread
+unsigned int *waiting_vector;		// Maintains the successor thread waiting for that region
+unsigned int *owner_vector;			// Keeps track of the current owner of the region
 
 /* Total number of cores required for simulation */
 unsigned int n_cores;
@@ -237,6 +243,7 @@ void thread_loop(unsigned int thread_id)
 {
   int status;
   unsigned int events;
+  revwin *revwin;
   
 #ifdef FINE_GRAIN_DEBUG
    unsigned int non_transactional_ex = 0, transactional_ex = 0;
@@ -259,51 +266,39 @@ void thread_loop(unsigned int thread_id)
     current_lp = current_msg.receiver_id;
     current_lvt  = current_msg.timestamp;
 
-    while(1)
-    {
       if(check_safety(current_lvt, &events))
       {
-	ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+	  
+	  ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+	
 #ifdef FINE_GRAIN_DEBUG
 	__sync_fetch_and_add(&non_transactional_ex, 1);
 #endif
       }
       else
       {
-	evt_try_count++;
-	if( (status = _xbegin()) == _XBEGIN_STARTED)
-	{
-	  ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+	  
+	  // Create a new revwin to record reverse instructions
+	  revwin = create_revwin(0);
+	  ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 	  #ifdef THROTTLING
           throttling(events);
-	  #endif 
+	  #endif
 	  
-	  if(check_safety(current_lvt, &events))
+	  while(!check_safety(current_lvt, &events))
 	  {
-	    _xend();
-#ifdef FINE_GRAIN_DEBUG
-	__sync_fetch_and_add(&transactional_ex, 1);
-#endif
+		  //TODO: check for wait_queue
+		  //TODO: check if there are other threads with less timestamp
+		  if(check_waiting()) {
+			execute_undo_event(revwin);
+			break;
+		  }
 	  }
-	  else
-	    _xabort(_ROLLBACK_CODE);
 	}
-	else
-	{
-	  status = _XABORT_CODE(status);
-	  if(status == _ROLLBACK_CODE)
-	    abort_count_conflict++;
-	  else
-	    abort_count_safety++;
-	  continue;
-	}
-      }
-      
-      break;
-    }
-   
-
+	
+	// Free current revwin
+	free_revwin(revwin);
     flush();
  
 /*    if(queue_pending_message_size())
