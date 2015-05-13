@@ -7,7 +7,7 @@
 #define TIME_STEP	5.0
 
 
-
+// converte da coordinate 'esagonali' a lineari
 static unsigned int map_hexagon_to_linear(unsigned int x, unsigned int y) {
 	unsigned int edge;
 
@@ -24,7 +24,7 @@ static unsigned int map_hexagon_to_linear(unsigned int x, unsigned int y) {
 	return y * edge + x;
 }
 
-
+// converte da coordinate lineari ad 'esagonali'
 static void map_linear_to_hexagon(unsigned int linear, unsigned int *x, unsigned int *y) {
 	unsigned int edge;
 
