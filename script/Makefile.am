@@ -9,9 +9,9 @@ HAVE_MIXED_SS=@cc_have_mixed_ss@
 # Install the compiler!
 
 
-.PHONY: rootsim-cc
+.PHONY: abmcc
 
-dist_bin_SCRIPTS = rootsim-cc
+dist_bin_SCRIPTS = abmcc
 CLEANFILES = $(dist_bin_SCRIPTS) 
 EXTRA_DIST = hijacker-conf.xml
 
@@ -28,10 +28,10 @@ do_subst = $(SED)	-e 's,[@]bindir[@],$(bindir),g' \
 			-e 's,[@]scriptlines[@],$(SCRIPT_LINES),g' \
 			-e 's,[@]hijacker_conf_lines[@],$(HIJACKER_CONF_LINES),g'
 
-rootsim-cc: rootsim-cc.in
+abmcc: abmcc.in
 	@echo "Building compiler..."
-	@$(do_subst) < rootsim-cc.in > rootsim-cc.pre
-	@cat rootsim-cc.pre hijacker-conf.xml > rootsim-cc
-	@rm rootsim-cc.pre
-	@chmod +x rootsim-cc
+	@$(do_subst) < abmcc.in > abmcc.pre
+	@cat abmcc.pre hijacker-conf.xml > abmcc
+	@rm abmcc.pre
+	@chmod +x abmcc
 

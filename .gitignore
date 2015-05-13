@@ -25,6 +25,7 @@ ltoptions.m4
 ltsugar.m4
 ltversion.m4
 lt~obsolete.m4
+libtool.m4
 
 /missing
 /stamp-h?
@@ -33,3 +34,5 @@ lt~obsolete.m4
 .libs/
 *.l[ao]
 *~
+
+abmcc

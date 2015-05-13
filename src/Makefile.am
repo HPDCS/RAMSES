@@ -5,38 +5,18 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 librootsim_include_HEADERS = ROOT-Sim.h
 librootsim_includedir = $(includedir)
-lib_LIBRARIES = librootsim.a libwrapperl.a libdymelor.a
+lib_LIBRARIES = libabm.a libabm_mm.a
 
-librootsim_a_SOURCES =	main.c \
-			lib/numerical.c \
-			lib/parseparam.c \
-			lib/topology.c \
-			arch/memusage.c \
-			arch/thread.c \
-			arch/ult.c \
-			arch/x86.c \
-			datatypes/array.c \
-			datatypes/list.c \
-			datatypes/calqueue.c \
-			mm/state.c \
-			queues/queues.c \
-			queues/reverse.c \
-			core/init.c \
-			core/core.c \
-			scheduler/stf.c \
-			scheduler/scheduler.c \
-			scheduler/control.c \
-			serial/serial.c \
-			statistics/statistics.c \
-			gvt/gvt.c \
-			gvt/fossil.c \
-			gvt/ccgs.c \
-			communication/window.c \
-			communication/communication.c
+libabm_a_SOURCES =	main.c \
+			calqueue.c \
+			core.c \
+			message_state.c \
+			numerical.c \
+			queue.c \
+			topology.c \
+			reverse.c
 
-libwrapperl_a_SOURCES = lib-wrapper/wrapper.c
+libabm_mm_a_SOURCES = 	allocator.c \
+			dymelor.c \
+			recoverable.c
 
-libdymelor_a_SOURCES = 	mm/checkpoints.c \
-			mm/dymelor.c \
-			mm/lp-alloc.c \
-			mm/malloc.c
