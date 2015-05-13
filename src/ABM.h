@@ -127,14 +127,13 @@ int Zipf(double skew, int limit);
 
 
 /* FUNCTIONS TYPEDEFS */
-typedef void (*agent_init_f)(unsigned int id);
-typedef void (*region_init_f)(unsigned int id);
-typedef void (*interaction_f)(unsigned int a, unsigned int b, void *args, size_t size);
-typedef void (*update_f)(unsigned int r, void *args, size_t size);
+typedef void *(*init_f)(unsigned int id);
+typedef void (*interaction_f)(unsigned int a, unsigned int b, simtime_t now, void *args, size_t size, void *state);
+typedef void (*update_f)(unsigned int r, simtime_t now, void *args, size_t size, void *state);
 
 
 /* CORE API */
-extern void Setup(unsigned int agentc, agent_init_f agent_init, unsigned int region, region_init_f region_init);
+extern void Setup(unsigned int agentc, init_f agent_init, unsigned int region, init_f region_init);
 extern void InitialPosition(unsigned int region);
 extern void StartSimulation(void);
 extern void Move(unsigned int destination, simtime_t time);
