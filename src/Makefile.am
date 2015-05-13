@@ -3,7 +3,7 @@ AM_CFLAGS = -I$(top_srcdir)/src
 AM_MAKEFLAGS = -s
 AUTOMAKE_OPTIONS = subdir-objects
 
-librootsim_include_HEADERS = ROOT-Sim.h
+librootsim_include_HEADERS = ABM.h
 librootsim_includedir = $(includedir)
 lib_LIBRARIES = libabm.a libabm_mm.a
 

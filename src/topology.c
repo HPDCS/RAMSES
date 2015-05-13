@@ -1,10 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <ROOT-Sim.h>
+#include <ABM.h>
 #include <core.h>
 
-unsigned int FindReceiver(int topology) {
+unsigned int FindRegion(int topology) {
 
 	// receiver is not unsigned, because we exploit -1 as a border case in the bidring topology.
 	int receiver;

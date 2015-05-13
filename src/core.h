@@ -1,7 +1,7 @@
 #ifndef __CORE_H
 #define __CORE_H
 
-#include "ROOT-Sim.h"
+#include "ABM.h"
 
 
 #include <stdbool.h>
@@ -11,7 +11,6 @@
 
 #include <float.h>
 
-#include <ROOT-Sim.h>
 
 #define MAX_LPs	2048
 

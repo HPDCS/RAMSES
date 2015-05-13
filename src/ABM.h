@@ -30,8 +30,8 @@
 
 
 #pragma once
-#ifndef __ROOT_Sim_H
-#define __ROOT_Sim_H
+#ifndef __ABM_H
+#define __ABM_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -101,10 +101,6 @@ typedef double simtime_t;
 /// Infinite timestamp: this is the highest timestamp in a simulation run
 #define INFTY DBL_MAX
 
-/// This is the definition of the number of LPs running in the current simulation
-extern unsigned int n_prc_tot;
-
-
 
 // Topology library
 #define TOPOLOGY_HEXAGON	1000
@@ -113,21 +109,10 @@ extern unsigned int n_prc_tot;
 #define TOPOLOGY_STAR		1003
 #define TOPOLOGY_RING		1004
 #define TOPOLOGY_BIDRING	1005
-unsigned int FindReceiver(int topology);
+#define TOPOLOGY_GRAPH		1005
+unsigned int FindRegion(int topology);
+void SetupGraph(const char *graph_file);
 
-
-
-// Expose to the application level the command line parameter parsers
-int GetParameterInt(void *args, char *name);
-float GetParameterFloat(void *args, char *name);
-double GetParameterDouble(void *args, char *name);
-bool GetParameterBool(void *args, char *name);
-char *GetParameterString(void *args, char *name);
-bool IsParameterPresent(void *args, char *name);
-
-
-// TODO: DA TOGLIERE, ERA ESPOSTO PER DEBUGGING!
-void __trace_input_queue(char *, int, unsigned int);
 
 
 // Expose to the application level the rollbackable numerical library
@@ -141,9 +126,25 @@ double Poisson(void);
 int Zipf(double skew, int limit);
 
 
-// ROOT-Sim core API
-extern void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size);
-extern void SetState(void *ptr);
+/* FUNCTIONS TYPEDEFS */
+typedef void (*agent_init_f)(unsigned int id);
+typedef void (*region_init_f)(unsigned int id);
+typedef void (*interaction_f)(unsigned int a, unsigned int b, void *args, size_t size);
+typedef void (*update_f)(unsigned int r, void *args, size_t size);
 
-#endif /* __ROOT_Sim_H */
+
+/* CORE API */
+extern void Setup(unsigned int agentc, agent_init_f agent_init, unsigned int region, region_init_f region_init);
+extern void InitialPosition(unsigned int region);
+extern void StartSimulation(void);
+extern void Move(unsigned int destination, simtime_t time);
+extern void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size); 
+extern void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size);
+extern void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size);
+
+
+
+
+
+#endif /* __ABM_H */
 
