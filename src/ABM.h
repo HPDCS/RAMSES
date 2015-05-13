@@ -128,8 +128,8 @@ int Zipf(double skew, int limit);
 
 /* FUNCTIONS TYPEDEFS */
 typedef void *(*init_f)(unsigned int id);
-typedef void (*interaction_f)(unsigned int a, unsigned int b, simtime_t now, void *args, size_t size, void *state);
-typedef void (*update_f)(unsigned int r, simtime_t now, void *args, size_t size, void *state);
+typedef void (*interaction_f)(unsigned int a, unsigned int b, simtime_t now, void *args, size_t size);
+typedef void (*update_f)(unsigned int r, simtime_t now, void *args, size_t size);
 
 
 /* CORE API */
@@ -140,6 +140,8 @@ extern void Move(unsigned int destination, simtime_t time);
 extern void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size); 
 extern void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size);
 extern void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size);
+extern void *GetAgentState(unsigned int);
+extern void *GetRegionState(unsigned int);
 
 
 
