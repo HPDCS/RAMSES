@@ -3,7 +3,7 @@
 #define _TCAR_H
 
 
-#include <ROOT-Sim.h>
+#include <ABM.h>
 #include <math.h>
 
 /* DISTRIBUZIONI TIMESTAMP */
@@ -25,8 +25,6 @@
 #define E	5
 
 
-
-
 #define MASK 0x00000001LL         // Mask used to check, set and unset bits
 #define NUM_CHUNKS_PER_BLOCK (sizeof(int) * 8)
 
@@ -34,12 +32,13 @@
 #define SET_BIT(A,I) ( A[(int)((int)(I) / NUM_CHUNKS_PER_BLOCK)] |= (MASK << (int)(I) % NUM_CHUNKS_PER_BLOCK) )
 #define RESET_BIT(A,I) ( A[(int)((int)(I) / NUM_CHUNKS_PER_BLOCK)] &= ~(MASK << (int)(I) % NUM_CHUNKS_PER_BLOCK) )
 
-
 #define BITMAP_SIZE(size) ((int)ceil((size)/NUM_CHUNKS_PER_BLOCK) * sizeof(int))
-
 #define BITMAP_NUMBITS(size) (BITMAP_SIZE(size) * NUM_CHUNKS_PER_BLOCK)
-
 #define ALLOCATE_BITMAP(size) (malloc(BITMAP_SIZE(size)))
+
+
+extern unsigned int number_of_regions;
+extern unsigned int number_of_agents;
 
 
 typedef struct _event_content_type {
@@ -74,8 +73,10 @@ typedef struct _agent_state_type {
 } agent_state_type;
 
 
-bool isValidNeighbour(unsigned int sender, unsigned int neighbour);
-unsigned int GetNeighbourId(unsigned int sender, unsigned int neighbour);
+// FIXME: cambiato nome delle seguenti per non confonderle con gli agenti in prossimità
+// le loro definizioni si trovano nel file 'region.h'
+//bool isValidNeighbour(unsigned int sender, unsigned int neighbour);
+//unsigned int GetNeighbourId(unsigned int sender, unsigned int neighbour);
 
 
 #endif /* _ANT_ROBOT_H */
