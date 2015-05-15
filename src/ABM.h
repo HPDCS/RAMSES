@@ -102,10 +102,10 @@ typedef void (*update_f)(unsigned int r, simtime_t now, void *args, size_t size)
 
 
 /* CORE API */
- extern void Setup(unsigned int agentc, init_f agent_init, unsigned int region, init_f region_init);
+extern void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f region_init);
 extern void InitialPosition(unsigned int region);
- extern void StartSimulation(unsigned short int n_threads);
-extern void Move(unsigned int destination, simtime_t time);
+extern void StartSimulation(unsigned short int n_threads);
+extern void Move(unsigned int agent, unsigned int destination, simtime_t time);
 extern void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size); 
 extern void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size);
 extern void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size);

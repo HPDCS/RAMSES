@@ -1,7 +1,7 @@
 #ifndef __CORE_H
 #define __CORE_H
 
-#include "ABM.h"
+#include <ABM.h>
 
 
 #include <stdbool.h>
@@ -19,12 +19,22 @@
 
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
 
+#define EXECUTION_IDLE				-1
+#define EXECUTION_AgentInteraction		1
+#define EXECUTION_EnvironmentInteraction	2
+#define EXECUTION_EnvironmentUpdate		3
+#define EXECUTION_Move				4
+
 typedef struct __msg_t
 {  
   unsigned int sender_id;
   unsigned int receiver_id;
   simtime_t timestamp;
   int type;
+  int entity1;
+  int entity2;
+  interaction_f interaction;
+  update_f update;
   unsigned int data_size;  
   unsigned char data[MAX_DATA_SIZE];
   

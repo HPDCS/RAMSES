@@ -25,8 +25,6 @@
 #include "reverse.h"
 
 
-#define THROTTLING
-
 
 
 //id del processo principale
@@ -45,6 +43,22 @@
 __thread int delta_count = 0;
 __thread double abort_percent = 1.0;
 
+
+
+__thread int execution_state = EXECUTION_IDLE;
+
+
+unsigned short int number_of_threads = 1;
+
+
+init_f agent_initialization;
+init_f region_initialization;
+
+unsigned int agent_c = 0;
+unsigned int region_c = 0;
+
+unsigned int *agent_position;
+bool **presence_matrix; // Rows are cells, columns are agents
 
 __thread simtime_t current_lvt = 0;
 
@@ -145,7 +159,6 @@ void throttling(unsigned int events) {
 
   if(delta_count == 0)
 	return;
-//  for(i = 0; i < 1000; i++);
 
   tick_count = CLOCK_READ();
   while(true) {
@@ -170,6 +183,14 @@ void hill_climbing(void) {
 
 void SetState(void *ptr) {
 	states[current_lp] = ptr;
+}
+
+void *GetRegionState(unsigned int region) {
+	return states[region];
+}
+
+void *GetAgentState(unsigned int agent) {
+	return states[region_c + agent];
 }
 
 static void process_init_event(void) {
@@ -213,30 +234,20 @@ bool check_termination(void) {
 	return ret;
 }
 
-void ScheduleNewEvent(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size)
-{
-  /*msg_t new_event;
-  bzero(&new_event, sizeof(msg_t));
- 
-  while(__sync_lock_test_and_set(&a, 1))
-    while(a);
-  void *ptr;   
-  ptr = malloc(event_size);
-  memcpy(ptr, event_content, event_size);
-  
-  __sync_lock_release(&a);
+void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size) {
+	queue_insert(region, UINT_MAX, UINT_MAX, NULL, environment_interaction, time, EXECUTION_EnvironmentUpdate, args, size);
+}
 
-  new_event.sender_id = current_lp;
-  new_event.receiver_id = receiver;
-  new_event.timestamp = timestamp;
-  new_event.sender_timestamp = current_lvt;
-  new_event.data = ptr;
-  new_event.data_size = event_size;
-  new_event.type = event_type;
-  new_event.who_generated = tid;
-  */
-  
-  queue_insert(receiver, timestamp, event_type, event_content, event_size);
+void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size) {
+	queue_insert(region, agent, UINT_MAX, environment_interaction, NULL, time, EXECUTION_EnvironmentInteraction, args, size);
+}
+
+void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size) {
+	queue_insert(current_lp, agent_a, agent_b, agent_interaction, NULL, time, EXECUTION_AgentInteraction, args, size);
+}
+
+void Move(unsigned int agent, unsigned int destination, simtime_t time) {
+	queue_insert(destination, agent, UINT_MAX, NULL, NULL, time, EXECUTION_Move, NULL, 0);
 }
 
 void thread_loop(unsigned int thread_id)
@@ -250,9 +261,6 @@ void thread_loop(unsigned int thread_id)
 #endif
   
   tid = thread_id;
-  
-//  if(tid != _MAIN_PROCESS)
-//    queue_register_thread();
   
   while(!stop && !sim_error)
   {
@@ -301,14 +309,6 @@ void thread_loop(unsigned int thread_id)
 	free_revwin(revwin);
     flush();
  
-/*    if(queue_pending_message_size())
-      min_output_time(queue_pre_min());
-    commit_time();    
-    queue_deliver_msgs();
-  */  
-    //Libero la memoria allocata per i dati dell'evento
-//    free(current_msg.data);
-
     can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
     stop = check_termination();
 
@@ -338,16 +338,63 @@ void thread_loop(unsigned int thread_id)
 }
 
 
+void *start_thread(void *args) {
+	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
+
+	thread_loop(tid);
+
+	pthread_exit(NULL);
+}
+
+void StartSimulation(unsigned short int number_of_threads) {
+	pthread_t tid[number_of_threads - 1];
+	int ret, i;
+
+	if(region_c == 0) {
+		fprintf(stderr, "ERROR: StartSimulation() has been called before Setup(). Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
+
+	//Child thread
+	for(i = 0; i < number_of_threads - 1; i++) {
+		if((ret = pthread_create(&tid[i], NULL, start_thread, NULL)) != 0) {
+			fprintf(stderr, "%s\n", strerror(errno));
+			abort();
+		}
+	}
+
+	//Main thread
+	thread_loop(0);
+
+	for(i = 0; i < number_of_threads - 1; i++)
+		pthread_join(tid[i], NULL);
+}
 
 
 
+void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f region_init) {
+	int i;
 
+	if(regionc == 0) {
+		fprintf(stderr, "ERROR: Starting a simulation with no regions. Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
 
+	if(agentc == 0) {
+		fprintf(stderr, "ERROR: Starting a simulation with no agents. Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
 
+	agent_c = agentc;
+	agent_initialization = agent_init;
+	region_c = regionc;
+	region_initialization = region_init;
 
-
-
-
-
-
-
+	agent_position = malloc(sizeof(unsigned int) * agentc);
+	bzero(agent_position, sizeof(unsigned int) * agentc);
+	presence_matrix = malloc(sizeof(bool *) * regionc);
+	for(i = 0; i < regionc; i++) {
+		presence_matrix[i] = malloc(sizeof(bool) * agentc);
+		bzero(presence_matrix[i], sizeof(bool) * agentc);
+	}
+}

@@ -86,7 +86,9 @@ void queue_register_thread(void)
   _thr_pool->non_commit_size = 0;
 }
 */
-void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size)
+void queue_insert(unsigned int receiver, unsigned int entity1, unsigned int entity2,
+		  interaction_f interaction, update_f update,
+		  simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size)
 {
   msg_t *msg_ptr;
 
@@ -112,6 +114,10 @@ void queue_insert(unsigned int receiver, simtime_t timestamp, unsigned int event
   msg_ptr->timestamp = timestamp;
   msg_ptr->data_size = event_size;
   msg_ptr->type = event_type;
+  msg_ptr->entity1 = entity1;
+  msg_ptr->entity2 = entity2;
+  msg_ptr->interaction = interaction;
+  msg_ptr->update = update;
 
   memcpy(msg_ptr->data, event_content, event_size);
 }
