@@ -1,47 +1,237 @@
-#include <ROOT-Sim.h>
+#include <stdlib.h>
 #include <stdio.h>
-#include <limits.h>
+#include <ABM.h>
 
 #include "application.h"
 
+unsigned int number_of_agents = 1;
+unsigned int number_of_regions = 1;
 
-
-void *states[4096];
-unsigned int num_cells;
-
-#include "agent.h"
-#include "cell.h"
-
-
-void ProcessEvent(int me, simtime_t now, int event_type, void *event_content, int event_size, void *pointer) {
-
-	if(event_type == INIT) {
-		if(!IsParameterPresent(event_content, "num_cells")) {
-			rootsim_error(true, "You must specify the number of cells (num_cells)\n");
-		}
-		num_cells = GetParameterInt(event_content, "num_cells");
-
-		if(num_cells >= n_prc_tot) {
-			rootsim_error(true, "With %d cells I need at least %d LPs\n", num_cells, num_cells + 1);
-		}
+/**
+ * Initializes a new agent with the specified id.
+ * Will be allocated a new state to represent the agent.
+ *
+ * @param id The identification integer number of the new agent
+ * @return A pointer to the newly crated state (therefore, agent)
+ */
+void *agent_init(unsigned int id) {
+	agent_state_type *state = NULL;
+	
+	state = malloc(sizeof(agent_state_type));
+	if (state == NULL) {
+		// Malloc has failed, no memory can be allocated
+		rootsim_error(true, "Unable to allocate memory for a new agent\n");
 	}
-
-
-	if(is_agent(me)) {
-		AgentProcessEvent(me, now, event_type, event_content, event_size, pointer);
-	} else {
-		CellProcessEvent(me, now, event_type, event_content, event_size, pointer);
+	bzero(state, sizeof(agent_state_type));
+	
+	// Initializes visit map
+	state->visit_map = malloc(number_of_regions * sizeof(map_t));
+	if (state->visit_map == NULL) {
+		rootsim_error(true, "Unable to allocate memory for agent's map\n");
 	}
+	bzero(state->visit_map, number_of_regions * sizeof(map_t));
+	
+	// Initializes visit map
+	state->a_star_map = malloc(number_of_regions * sizeof(map_t));
+	if (state->a_star_map == NULL) {
+		rootsim_error(true, "Unable to allocate memory for agent's choosing map\n");
+	}
+	bzero(state->a_star_map, number_of_regions * sizeof(map_t));
+	
+	// Sets the starting region for the current agent
+	// It randomly chooses a region to settle the robot
+	InitialPosition(RandomRange(0, number_of_regions));
+	
+	// Fires the initial interaction event
+	EnvironmentInteraction(id, state->current_cell, region_interaction, 0, NULL, 0);
+	
+	return state;
 }
 
 
-int OnGVT(unsigned int me, void *snapshot) {
-
-	if(is_agent(me)) {
-		return AgentOnGVT(me, snapshot);
-	} else  {
-		return CellOnGVT(me, snapshot);
+/**
+ * Initializes a new region with the specified id.
+ * Will be allocated a new state to represent the region.
+ *
+ * @param id The identification integer number of the new reigon
+ * @return A pointer to the newly crated state
+ */
+void *region_init(unsigned int id) {
+	cell_state_type *state = NULL;
+	
+	state = malloc(sizeof(region_state_type));
+	if (state == NULL) {
+		// Malloc has failed, no memory can be allocated
+		rootsim_error(true, "Unable to allocate memory for a new region\n");
 	}
+	bzero(state, sizeof(region_state_type));
+	
+	// Setup region properties, i.e. obstacles
+	// Chooeses randomly if the current region has an obstacle or not
+	if (Random() < OBSTACLE_PROB) {
+		state->has_obstacle = true;
+	}
+	
+	// Fires the initial interaction event
+	EnvironmentUpdate(id, 0, update_region, NULL, 0);
+	
+	return state;
+}
 
-	return true;
+/**
+ * It represents the callback function invoked by the simulation engine
+ * whenever a new interaction event between two agents has been processed.
+ *
+ * @param agent_a First agent that interacts with agent_b
+ * @param agent_b Second agent that interacts with agent_a
+ * @param now Current simulation time
+ * @param args Pointer to a arguments vector
+ * @param size Size (in bytes) of the arguments vector
+ */
+void agent_interaction(unsigned int agent_a, unsigned int agent_b, simtime_t now, void *args, size_t size) {
+	agent_state_type state;
+	
+	// TODO: Da completare con l'inserimento della logica di scambio della mappa?
+	// Al momento è gestita da 'region_interaction'
+}
+
+
+/**
+ * It represents the callback function invoked by the simulation engine
+ * whenever a new environmental interaction event has been processed.
+ * 
+ * One robot is interacting with the current region, therefore
+ * it has to update its visited cell map, check whether it has
+ * reached its target or choose a new direction to follow.
+ * Finally if in the current region there is another robot,
+ * the current one should interact with it by exchanging their maps.
+ *
+ * @param region_id The identification region's number
+ * @param agent_id The identification number of the involed agent
+ * @param now Current simulation time
+ * @param args Pointer to a arguments vector
+ * @param size Size (in bytes) of the arguments vector
+ */
+void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t now, void *args, size_t size) {
+	agent_state_type agent;
+	agent_state_type mate;
+	cell_state_type region;
+	map_t map;
+	
+	unsigned int number_of_mates;
+	unsigned int **mates;
+	unsigned int index;
+	unsigned int step_cell;
+	simtime_t step_time;
+	
+	// TODO: come devono essere gestiti i parametri della funzione?
+	
+	// Retrieve the states given the identification numbers of both agent and region
+	region = GetRegionState(region_id);
+	agent = GetAgentState(agent_id);
+	
+	// Updates robot's knowledge
+	map = agent->visit_map[region_id];
+	if (!map->visited) {
+		// If the region has not yet visited, then mark it and increment the counter
+		map->visited = true;
+		agent->visited_cells++;
+		
+		// Updates the region's neighbours from the robot's perspective
+		memcpy(region->neighbours, map->neighbours, sizeof(unsigned int) * 6);
+	}
+	
+	// Checks whether the cell represents robot's final target,
+	// otherwise continue randomly
+	if (agent->target_cell == region_id) {
+		agent->target_cell = UINT_MAX;
+	}
+	
+	// Checks whether there is any other robot in the same region
+	if (region->present_agents > 1) {
+		// There are other robot here other than me
+		
+		// Retrieve the list of mates' ids
+		number_of_mates = GetNeighbours(mates);
+		
+		// I'm going to exchange map's information with each mate
+		// i've found in the current region
+		for (index = 0; index < number_of_mates; index ++) {
+			// TODO: schedulare un evento AgentInteraction invece che gestirlo direttamente quì?
+		
+			mate = GetAgentState(mates[index]);
+			
+			// Computes and exchanges map's diff, at the same time
+			// when a view exchange takes palce, 'updated' robot's target
+			// will be automatically update as well
+			map_diff_exchange(agent, mate);
+			
+			agent->met_robots++;
+			mate->met_robots++;
+		}
+	}
+	
+	// With some (tiny) probability forget where we are heading to!
+	if (Random() < 0.01) { // TODO: to macro
+		agent->target_cell = UINT_MAX;
+	}
+	
+	// If there are no target selected, choose a new one
+	if (agent->target_cell == UINT_MAX) {
+		agent->target_cell = closest_frontier(agent, -1);
+		
+		// If no good choice is available, choose a random one
+		if (agent->target_cell == UINT_MAX) {
+			agent->target_cell = RandomRange(0, number_of_regions);
+		}
+	}
+	
+	// Compute a direction to move towards
+	agent->direction = compute_direction();
+	
+	// If computed direction is UINT_MAX, then there is no path to the target.
+	// Just take a random direction
+	if(!is_reachable(state->current_cell, state->direction)) {
+		do {
+			state->direction = RandomRange(0, 5);
+		} while(!is_reachable(state->current_cell, state->direction));
+	}
+	
+	// Get the region's id from the knowledge of current cell and the chosen direction
+	step_cell = get_target_id(state->current_cell, state->direction);
+	step_time = now + Expent(AGENT_TIME_STEP);
+	
+	// Schedule a new intercation event between the agent and the next region
+	EnvironmentInteraction(agent_id, step_cell, step_time, region_interaction, NULL, 0);
+}
+
+
+/**
+ * It represents the callback function invoked by the simulation engine
+ * whenever an environmental update on itself has been processed.
+ *
+ * @param region_id The identification number of the involed region
+ * @param now Current simulation time
+ * @param args Pointer to a arguments vector
+ * @param size Size (in bytes) of the arguments vector
+ */
+void update_region(unsigned int region_id, simtime_t now, void *args, size_t size) {
+	simtime_t step_time;
+	
+	step_time = now + (simtime_t) Expent(REGION_KEEP_ALIVE_INTERVAL);
+	
+	EnvironmentUpdate(region_id, step_time, update_region, NULL, 0);
+}
+
+
+int main(int argc, argv char**) {
+	// TODO: gestione dei parametri?
+
+	// Setup of the simulation model
+	Setup(number_of_agents, agent_init, number_of_regions, region_init);
+	
+	// Starting the simulation process
+	StartSimulation();
+
+	return 0;
 }
