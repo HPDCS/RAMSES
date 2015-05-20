@@ -11,7 +11,7 @@
  * @param agent_b Pointer to the second agent's state
  */
 void map_diff_exchange(agent_state_type *agent_a, agent_state_type *agent_b) {
-	int index;
+	unsigned int index;
 	map_t *map_a;
 	map_t *map_b;
 	

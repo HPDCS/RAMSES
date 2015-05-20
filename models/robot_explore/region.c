@@ -23,7 +23,8 @@ unsigned int map_hexagon_to_linear(unsigned int x, unsigned int y) {
 		rootsim_error(true, "Hexagonal map wrongly specified!\n");
 	}
 	if(x > edge || y > edge) {
-		rootsim_error(true, "Coordinates (%u, %u) are higher than maximum (%u, %u)\n", x, y, edge, edge);
+		printf("Coordinates (%u, %u) are higher than maximum (%u, %u)\n", x, y, edge, edge);
+		exit(1);
 	}
 
 	return y * edge + x;

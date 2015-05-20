@@ -105,8 +105,6 @@ void *region_init(unsigned int id) {
  * @param size Size (in bytes) of the arguments vector
  */
 void agent_interaction(unsigned int agent_a, unsigned int agent_b, simtime_t now, void *args, size_t size) {
-	agent_state_type state;
-	
 	// TODO: Da completare con l'inserimento della logica di scambio della mappa?
 	// Al momento è gestita da 'region_interaction'
 }
@@ -134,7 +132,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	map_t *map;
 	
 	unsigned int number_of_mates;
-	unsigned int **mates;
+	unsigned int *mates;
 	unsigned int index;
 	unsigned int step_cell;
 	simtime_t step_time;
@@ -167,14 +165,14 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 		// There are other robot here other than me
 		
 		// Retrieve the list of mates' ids
-		number_of_mates = GetNeighbours(mates);
+		number_of_mates = GetNeighbours(&mates);
 		
 		// I'm going to exchange map's information with each mate
 		// i've found in the current region
 		for (index = 0; index < number_of_mates; index ++) {
 			// TODO: schedulare un evento AgentInteraction invece che gestirlo direttamente quì?
 		
-			mate = GetAgentState(*(mates[index]));
+			mate = GetAgentState(mates[index]);
 			
 			// Computes and exchanges map's diff, at the same time
 			// when a view exchange takes palce, 'updated' robot's target

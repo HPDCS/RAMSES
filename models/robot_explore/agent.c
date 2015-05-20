@@ -90,6 +90,7 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 		}
 
 		// Can I go in that direction?
+		// TODO: signed comparison
 		if(state->visit_map[current_cell].neighbours[i] != -1) {
 
 			// Is this the target?
@@ -168,9 +169,9 @@ unsigned int compute_direction(agent_state_type *state) {
 
 
 unsigned int closest_frontier(agent_state_type *state, unsigned int exclude) {
-	unsigned int i, j;
+	unsigned int i;
 	unsigned int x, y, curr_x, curr_y;
-	bool is_reachable;
+//	bool is_reachable;
 	double distance;
 	double min_distance = INFTY;
 	unsigned int target = -1;

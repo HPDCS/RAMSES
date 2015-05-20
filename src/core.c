@@ -52,13 +52,13 @@ __thread int execution_state = EXECUTION_IDLE;
 unsigned short int number_of_threads = 1;
 
 // API callbacks
-init_f agent_initialization;
-init_f region_initialization;
+static init_f agent_initialization;
+static init_f region_initialization;
 
-interaction_f environment_interaction;
-interaction_f agent_interaction;
+static interaction_f environment_interaction;
+static interaction_f agent_interaction;
 
-update_f environment_update;
+static update_f environment_update;
 
 
 unsigned int agent_c = 0;
