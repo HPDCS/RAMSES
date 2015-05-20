@@ -7,60 +7,6 @@
 #include "region.h"
 
 
-unsigned int opposite_direction_of(unsigned int direction) {
-	unsigned int opposite;
-
-	switch(direction) {
-		case NE:
-			opposite = SW;
-			break;
-		case E:
-			opposite = W;
-			break;
-		case SE:
-			opposite = NW;
-			break;
-		case SW:
-			opposite = NE;
-			break;
-		case W:
-			opposite = E;
-			break;
-		case NW:
-			opposite = SE;
-			break;
-		default:
-			opposite = UINT_MAX;
-			break;
-	}
-
-	return opposite;
-}
-
-char *direction_name(unsigned int direction) {
-
-	switch(direction) {
-		case NE:
-			return "NE";
-			break;
-		case E:
-			return "E";
-			break;
-		case SE:
-			return "SE";
-			break;
-		case SW:
-			return "SW";
-			break;
-		case W:
-			return "W";
-			break;
-		case NW:
-			return "NW";
-			break;
-	}
-	return "UNKNOWN";
-}
 
 double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *good_direction) {
 	unsigned int i;
@@ -75,14 +21,15 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 	SET_BIT(state->a_star_map, current_cell);
 	map_linear_to_hexagon(state->target_cell, &x1, &y1);
 
-	for(i = 0; i < 6; i ++) {
+	for(i = 0; i < CELL_EDGES; i ++) {
 
-		// Is there a cell to reach in this direction?
-		if(!is_reachable(current_cell, i)) {
+		// Query the simulation engine to retrieve the id of the region
+		// heading in the selected direction
+		tentative_cell = GetTargetRegion(current_cell, i);
+		if (tentative_cell < 0) {
+			// In that direction no region is reachable
 			continue;
 		}
-
-		tentative_cell = get_target_id(current_cell, i);
 
 		// We don't simply visit a cell already visited!
 		if(CHECK_BIT(state->a_star_map, tentative_cell)) {
@@ -116,16 +63,6 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 			}
 		}
 	}
-	
-	//	if(min_distance < INFTY) {
-//		printf("direction: %d\n", *good_direction); fflush(stdout);
-//		printf("%d, ", GetNeighbourId(current_cell, *good_direction));
-//	}
-
-	// We're getting far!
-	//~ if(min_distance > distance) {
-		//~ return INFTY;
-	//~ }
 
 	return min_distance;
 }
@@ -138,32 +75,6 @@ unsigned int compute_direction(agent_state_type *state) {
 
 	a_star(state, state->current_cell, &good_direction);
 
-	//	printf("\n");
-/*	unsigned int x1, y1;
-	unsigned int x2, y2;
-	double min_distance = INFTY;
-	double distance;
-	double dx, dy;
-
-	map_linear_to_hexagon(state->target_cell, &x1, &y1);
-
-	int i;
-	for( i = 0; i < 6; i++) {
-		if(isValidNeighbour(state->current_cell, i)) {
-			map_linear_to_hexagon(GetNeighbourId(state->current_cell, i), &x2, &y2);
-
-			dx = x1-x2;
-                        dy = y2-y1;
-			distance = sqrt( dx*dx + dy*dy );
-
-			if(distance < min_distance) {
-				min_distance = distance;
-				good_direction = i;
-			}
-		}
-	}
-*/
-	
 	return good_direction;
 }
 
@@ -171,7 +82,6 @@ unsigned int compute_direction(agent_state_type *state) {
 unsigned int closest_frontier(agent_state_type *state, unsigned int exclude) {
 	unsigned int i;
 	unsigned int x, y, curr_x, curr_y;
-//	bool is_reachable;
 	double distance;
 	double min_distance = INFTY;
 	unsigned int target = -1;

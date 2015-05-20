@@ -358,13 +358,13 @@ void numerical_init(void) {
 
 	unsigned int i;
 
-	seeds = malloc(sizeof(seed_type) * n_prc_tot);
+	seeds = malloc(sizeof(seed_type) * region_c);
 
 	// Initialize the master seed
 	load_seed();
 
 	// Initialize the per-LP seed
-	for(i = 0; i < n_prc_tot; i++) {
+	for(i = 0; i < region_c; i++) {
 		seeds[i] = sanitize_seed(ROR((int64_t)master_seed, i % RS_WORD_LENGTH));
 	}
 

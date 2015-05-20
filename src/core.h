@@ -23,8 +23,7 @@
 #define EXECUTION_Move				4
 
 
-typedef struct __msg_t
-{  
+typedef struct __msg_t {  
   unsigned int sender_id;
   unsigned int receiver_id;
   simtime_t timestamp;
@@ -43,12 +42,15 @@ extern __thread simtime_t current_lvt;
 extern __thread unsigned int current_lp;
 extern __thread unsigned int tid;
 
+extern unsigned int agent_c;
+extern unsigned int region_c;
+
+extern unsigned int *agent_position;
+extern bool **presence_matrix; // Rows are cells, columns are agents;
+
 
 /* Total number of cores required for simulation */
 extern unsigned int n_cores;
-
-/* Total number of logical processes running in the simulation */
-extern unsigned int n_prc_tot;
 
 
 void init(unsigned int _thread_num, unsigned int);
@@ -60,8 +62,8 @@ extern void rootsim_error(bool fatal, const char *msg, ...);
 
 extern void _mkdir(const char *path);
 
-extern int OnGVT(unsigned int me, void *snapshot);
-extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);
+/*extern int OnGVT(unsigned int me, void *snapshot);
+extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);*/
 
 extern void flush(void);
 

@@ -41,6 +41,7 @@
 #define HILL_CLIMB_EVALUATE	500
 #define DELTA 500  // tick count
 #define HIGHEST_COUNT	5
+
 __thread int delta_count = 0;
 __thread double abort_percent = 1.0;
 
@@ -49,16 +50,11 @@ __thread double abort_percent = 1.0;
 __thread int execution_state = EXECUTION_IDLE;
 
 
-unsigned short int number_of_threads = 1;
+static unsigned short int number_of_threads = 1;
 
 // API callbacks
 static init_f agent_initialization;
 static init_f region_initialization;
-
-static interaction_f environment_interaction;
-static interaction_f agent_interaction;
-
-static update_f environment_update;
 
 
 unsigned int agent_c = 0;
@@ -68,29 +64,25 @@ unsigned int *agent_position;
 bool **presence_matrix; // Rows are cells, columns are agents
 
 __thread simtime_t current_lvt = 0;
-__thread unsigned int current_lp = 0;
-__thread unsigned int tid = 0;
+__thread unsigned int current_lp = 0;		/// Represents the region's id
+__thread unsigned int tid = 0;				/// Logical id of the worker thread (may be different from the region's id)
 
-
+// TODO: servono ?
 __thread unsigned long long evt_count = 0;
 __thread unsigned long long evt_try_count = 0;
 __thread unsigned long long abort_count_conflict = 0, abort_count_safety = 0;
 
-unsigned int *lock_vector;			// Tells whether one region has been locked by some thread
-unsigned int *waiting_vector;		// Maintains the successor thread waiting for that region
-unsigned int *owner_vector;			// Keeps track of the current owner of the region
+unsigned int *lock_vector;			/// Tells whether one region has been locked by some thread
+unsigned int *waiting_vector;		/// Maintains the successor thread waiting for that region
+unsigned int *owner_vector;			/// Keeps track of the current owner of the region
 
 /* Total number of cores required for simulation */
-unsigned int n_cores;
-/* Total number of logical processes running in the simulation */
-unsigned int n_prc_tot;
+unsigned int n_cores;		// TODO: ?
 
 bool stop = false;
 bool sim_error = false;
 
-
-void **states;
-
+void **states;		/// Linear vector which holds pointers to regions' (first) and agents' states
 bool *can_stop;
 
 
@@ -159,15 +151,15 @@ void _mkdir(const char *path) {
 
 
 void throttling(unsigned int events) {
-  long long tick_count;
-  register int i;
+  unsigned long long tick_count;
+  //~register int i;
 
   if(delta_count == 0)
 	return;
 
   tick_count = CLOCK_READ();
   while(true) {
-	if(CLOCK_READ() > tick_count + 	events * DELTA * delta_count)
+	if(CLOCK_READ() > tick_count + events * DELTA * delta_count)
 		break;
   }
 }
@@ -198,11 +190,45 @@ void *GetAgentState(unsigned int agent) {
 	return states[region_c + agent];
 }
 
-// TODO: stub
+
 int GetNeighbours(unsigned int **neighbours) {
-	*neighbours = NULL;
-	return 0;
+	unsigned int region_id;
+	unsigned int agent_id;
+	unsigned int count;
+
+	// Both regions and agents states are coalesced in a single linear
+	// list held by 'states'. It first contains regions, then agents
+
+	// In order to find the agents that are in the same regions we have
+	// to scan the whole list looking for the position that each agent has.
+
+	// Gets current agent's position
+	region_id = agent_position[current_lp];
+
+	// Counts the other agent that are present in the same region
+	count = 0;
+	for (agent_id = 0; agent_id < agent_c; agent_id++) {
+		if (presence_matrix[region_id][agent_id]) {
+			// Increment the total number of agent present in the same region
+			count++;
+		}
+	}
+
+	// Allocates memory for the result list
+	*neighbours = malloc(sizeof(unsigned int) * count);
+
+	// Looks for all agents by scanning the list to fetch the exact id of each neighbour
+	for (agent_id = 0; agent_id < agent_c; agent_id++) {
+		if (agent_position[agent_id] == region_id) {
+			// This agent is currently in the same region
+			// therefore it will be added to the result list
+			*(neighbours)[agent_id] = agent_id;
+		}
+	}
+
+	return count;
 }
+
 
 // TODO: stub
 void InitialPosition(unsigned int region) {
@@ -210,13 +236,16 @@ void InitialPosition(unsigned int region) {
 }
 
 
+// TODO: come gestire con la nuova struttura ?
 static void process_init_event(void) {
   unsigned int i;
 
-  for(i = 0; i < n_prc_tot; i++) {
+  for(i = 0; i < region_c; i++) {
     current_lp = i;
     current_lvt = 0;
+    
     ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
+
     queue_deliver_msgs(); 
   }
   
@@ -225,13 +254,14 @@ static void process_init_event(void) {
 void init(unsigned int _thread_num, unsigned int lps_num) {
   printf("Starting an execution with %u threads, %u LPs\n", _thread_num, lps_num);
   n_cores = _thread_num;
-  n_prc_tot = lps_num;
-  states = malloc(sizeof(void *) * n_prc_tot);
-  can_stop = malloc(sizeof(bool) * n_prc_tot);
+  region_c = lps_num;
+  states = malloc(sizeof(void *) * region_c);
+  can_stop = malloc(sizeof(bool) * region_c);
  
 #ifndef NO_DYMELOR
   dymelor_init();
 #endif
+
   queue_init();
   message_state_init();
   numerical_init();
@@ -243,10 +273,12 @@ void init(unsigned int _thread_num, unsigned int lps_num) {
 
 bool check_termination(void) {
 	int i;
+
 	bool ret = true;
-	for(i = 0; i < n_prc_tot; i++) {
+	for(i = 0; i < region_c; i++) {
 		ret &= can_stop[i];
 	}
+
 	return ret;
 }
 
@@ -270,6 +302,7 @@ void Move(unsigned int agent, unsigned int destination, simtime_t time) {
 }
 
 
+// Main loop
 void thread_loop(unsigned int thread_id) {
  // int status;
   unsigned int events;
@@ -281,11 +314,9 @@ void thread_loop(unsigned int thread_id) {
   
   tid = thread_id;
   
-  while(!stop && !sim_error)
-  {
+  while(!stop && !sim_error) {
 
-    if(queue_min() == 0)
-    {
+    if(queue_min() == 0) {
       continue;
     }
     
@@ -356,6 +387,7 @@ void thread_loop(unsigned int thread_id) {
 }
 
 
+
 void *start_thread(void *args) {
 	//~int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
 	tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
@@ -364,6 +396,7 @@ void *start_thread(void *args) {
 
 	pthread_exit(NULL);
 }
+
 
 void StartSimulation(unsigned short int number_of_threads) {
 	pthread_t tid[number_of_threads - 1];
@@ -392,7 +425,7 @@ void StartSimulation(unsigned short int number_of_threads) {
 
 
 void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f region_init) {
-	int i;
+	unsigned int i;
 
 	if(regionc == 0) {
 		fprintf(stderr, "ERROR: Starting a simulation with no regions. Aborting...\n");

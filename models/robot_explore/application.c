@@ -85,7 +85,7 @@ void *region_init(unsigned int id) {
 	// Setup region properties, i.e. obstacles
 	// Chooeses randomly if the current region has an obstacle or not
 	if (Random() < OBSTACLE_PROB) {
-		state->has_obstacles = true;
+		state->obstacles[RandomRange(0, CELL_EDGES)];
 	}
 	
 	// Fires the initial interaction event
@@ -230,9 +230,11 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
  */
 void update_region(unsigned int region_id, simtime_t now, void *args, size_t size) {
 	simtime_t step_time;
-	
+
+	// Compute the new simulation time at which the vent must be scheduled
 	step_time = now + (simtime_t) Expent(REGION_KEEP_ALIVE_INTERVAL);
-	
+
+	// Schedule the new event
 	EnvironmentUpdate(region_id, step_time, update_region, NULL, 0);
 }
 

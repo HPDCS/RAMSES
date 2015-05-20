@@ -22,9 +22,9 @@ void recoverable_init(void) {
 	
 	register unsigned int i;
 	
-	recoverable_state = __real_malloc(sizeof(malloc_state *) * n_prc_tot);
+	recoverable_state = __real_malloc(sizeof(malloc_state *) * region_c);
 
-	for(i = 0; i < n_prc_tot; i++){
+	for(i = 0; i < region_c; i++){
 
 		recoverable_state[i] = __real_malloc(sizeof(malloc_state));
 		if(recoverable_state[i] == NULL)
@@ -39,7 +39,7 @@ void recoverable_fini(void) {
 	unsigned int i, j;
 	malloc_area *current_area;
 
-	for(i = 0; i < n_prc_tot; i++) {
+	for(i = 0; i < region_c; i++) {
 		for (j = 0; j < (unsigned int)recoverable_state[i]->num_areas; j++) {
 			current_area = &(recoverable_state[i]->areas[j]);
 			if (current_area != NULL) {

@@ -13,7 +13,7 @@
 *
 */
 void dymelor_init(void) {
-	allocator_init(n_prc_tot);
+	allocator_init(region_c);
 	recoverable_init();
 }
 

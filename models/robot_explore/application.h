@@ -16,13 +16,14 @@
 #define is_agent(me) (me >= num_cells)
 
 
+// Topology
+#define CELL_EDGES 4
+
 // Movement directions
-#define NE	0
-#define NW	1
-#define W	2
-#define SW	3
-#define SE	4
-#define E	5
+#define N 0
+#define E 1
+#define S 2
+#define W 3
 
 
 #define MASK 0x00000001LL         // Mask used to check, set and unset bits
@@ -48,16 +49,16 @@ typedef struct _event_content_type {
 
 
 typedef struct _cell_state_type{
-	unsigned int neighbours[6];
+	unsigned int neighbours[CELL_EDGES];		/// Neighbour cell for each edge
+	bool obstacles[CELL_EDGES];					/// Whether the specific edge has an obstacle
 	unsigned int *agents;
 	unsigned int present_agents;
-	bool has_obstacles;
 } cell_state_type;
 
 
 typedef struct _map_t {
 	bool visited;
-	unsigned int neighbours[6];
+	unsigned int neighbours[CELL_EDGES];
 } map_t;
 
 

@@ -78,9 +78,9 @@ typedef double simtime_t;
 #define TOPOLOGY_STAR		1003
 #define TOPOLOGY_RING		1004
 #define TOPOLOGY_BIDRING	1005
-#define TOPOLOGY_GRAPH		1005
-unsigned int FindRegion(int topology);
-void SetupGraph(const char *graph_file);
+#define TOPOLOGY_GRAPH		1006
+
+extern void SetupGraph(const char *graph_file);
 
 
 
@@ -102,19 +102,77 @@ typedef void (*update_f)(unsigned int r, simtime_t now, void *args, size_t size)
 
 
 /* CORE API */
+
+/**
+ * Called once at the beginning to setup the whole simulation engine.
+ *
+ * @param agentc Number of the agents the engine has to handle
+ * @param agent_init Pointer to the function callback the simulation engine will invoke to initialize each agent's state
+ * @param regionc Number of the regions the engine has to handle
+ * @param reigon_init Pointer to the function callback the simulation engine will invoke to initialize each region's state
+ */
 extern void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f region_init);
+
+/**
+ * Sets the initial region where the current agent starts from.
+ *
+ * @param region The region's id
+ */
 extern void InitialPosition(unsigned int region);
+
+/**
+ * Once setup, it starts the simulation using the specified number of threads
+ *
+ * @param n_threads Number of threads to use
+ */
 extern void StartSimulation(unsigned short int n_threads);
 extern void Move(unsigned int agent, unsigned int destination, simtime_t time);
 extern void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size); 
 extern void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size);
 extern void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size);
-extern void *GetAgentState(unsigned int);
-extern void *GetRegionState(unsigned int);
+
+/**
+ * Returns the current agent's state.
+ *
+ * @param agent_id The id of the target agent.
+ * @return A pointer to the state's structure
+ */
+extern void *GetAgentState(unsigned int agent_id);
+
+/**
+ * Return the currente region's state.
+ * 
+ * @param region_id The id of the target agent.
+ * @return A pointer to the state's structure.
+ */
+extern void *GetRegionState(unsigned int region_id);
+
+/**
+ * Facility to find out all the mates that are in the same region of the current agent.
+ *
+ * @param neighbours Pointer to an array of integers where to put the IDs of all the neighbours.
+ * @return Returns the number of the agents close to the caller one, namely the size of the array.
+ */
 extern int GetNeighbours(unsigned int **neighbours);
 
+/**
+ * Returns a random reachable region given a topology specification.
+ *
+ * @param topology Specifies current map's topology.
+ * @return The id of a randomly chosen region towrd which the agent can move.
+ */
+extern unsigned int FindRegion(int topology);
 
-
+/**
+ * Given a current region and a direction (coherent with the current topology)
+ * the simulation engine will provide the target region toward which the agent
+ * wants to move on.
+ *
+ * @param region_id Is the current region's id where the agent actually is.
+ * @param direction Integer number defining the agent's heading.
+ * @return The target region's id or -1 in case no cell are reachable with this configuration.
+ */
+extern unsigned int GetTargetRegion(unsigned int region_id, unsigned int direction);
 
 
 #endif /* __ABM_H */

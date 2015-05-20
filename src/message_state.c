@@ -16,12 +16,12 @@ extern int queue_lock;
 
 void message_state_init(void)
 {
-  int i;
+  unsigned int i;
   
   current_time_vector = malloc(sizeof(simtime_t) * n_cores);
   outgoing_time_vector = malloc(sizeof(simtime_t) * n_cores);
   
-  for(i = 0; i < n_cores; i++)
+  for(i = 0; i < n_cores; i++)	// TODO: n_cores -> ?
   {
     current_time_vector[i] = INFTY;
     outgoing_time_vector[i] = INFTY; //TODO: Oppure a 0 ? riguardare...

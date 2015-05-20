@@ -1,20 +1,22 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <ABM.h>
 #include <core.h>
+#include <ABM.h>
 
-unsigned int FindRegion(int topology) {
+double *pmove;		// Probability matrix of each move (Source region by Destination region)
+unsigned int topology;
 
+
+static unsigned int get_target_id(unsigned int region_id, unsigned int direction) {
 	// receiver is not unsigned, because we exploit -1 as a border case in the bidring topology.
-	int receiver;
- 	double u;
+	int target;
 
 
- 	// These must be unsigned. They are not checked for negative (wrong) values,
- 	// but they would overflow, and are caught by a different check.
- 	unsigned int edge;
- 	unsigned int x, y, nx, ny;
+	// These must be unsigned. They are not checked for negative (wrong) values,
+	// but they would overflow, and are caught by a different check.
+	unsigned int edge;
+	unsigned int x, y, nx, ny;
 
 	switch(topology) {
 
@@ -28,33 +30,34 @@ unsigned int FindRegion(int topology) {
 			#define NE	5
 
 			// Convert linear coords to hexagonal coords
-			edge = sqrt(n_prc_tot);
-			x = current_lp % edge;
-			y = current_lp / edge;
+			edge = sqrt(region_c);
+			x = region_id % edge;
+			y = region_id / edge;
 
 			// Sanity check!
-			if(edge * edge != n_prc_tot) {
+			if(edge * edge != region_c) {
 				rootsim_error(true, "Hexagonal map wrongly specified!\n");
 				return 0;
 			}
 
 			// Very simple case!
-			if(n_prc_tot == 1) {
-				receiver = current_lp;
+			if(region_c == 1) {
+				target = region_id;
 				break;
 			}
 
-			// Select a random neighbour once, then move counter clockwise
-			receiver = 6 * Random();
 			bool invalid = false;
 
-			// Find a random neighbour
+			if (direction > 6)
+				rootsim_error(true, "Wrong direction for this topology");
+
+			// Find the neighbour towards 'direction'
 			do {
 				if(invalid) {
-					receiver = (receiver + 1) % 6;
+					target = (target + 1) % 6;
 				}
 
-				switch(receiver) {
+				switch(direction) {
 					case NW:
 						nx = (y % 2 == 0 ? x - 1 : x);
 						ny = y - 1;
@@ -89,7 +92,7 @@ unsigned int FindRegion(int topology) {
 			} while(nx >= edge || ny >= edge);
 
 			// Convert back to linear coordinates
-			receiver = (ny * edge + nx);
+			target = (ny * edge + nx);
 
 			#undef NE
 			#undef NW
@@ -109,32 +112,26 @@ unsigned int FindRegion(int topology) {
 			#define E	3
 
 			// Convert linear coords to square coords
-			edge = sqrt(n_prc_tot);
-			x = current_lp % edge;
-			y = current_lp / edge;
+			edge = sqrt(region_c);
+			x = region_id % edge;
+			y = region_id / edge;
 
 			// Sanity check!
-			if(edge * edge != n_prc_tot) {
+			if(edge * edge != region_c) {
 				rootsim_error(true, "Square map wrongly specified!\n");
 				return 0;
 			}
 
 
 			// Very simple case!
-			if(n_prc_tot == 1) {
-				receiver = current_lp;
+			if(region_c == 1) {
+				target = region_id;
 				break;
 			}
 
 			// Find a random neighbour
 			do {
-
-				receiver = 4 * Random();
-				if(receiver == 4) {
-					receiver = 3;
-				}
-
-				switch(receiver) {
+				switch(direction) {
 					case N:
 						nx = x;
 						ny = y - 1;
@@ -159,7 +156,7 @@ unsigned int FindRegion(int topology) {
 			} while(nx >= edge || ny >= edge);
 
 			// Convert back to linear coordinates
-			receiver = (ny * edge + nx);
+			target = (ny * edge + nx);
 
 			#undef N
 			#undef W
@@ -170,42 +167,39 @@ unsigned int FindRegion(int topology) {
 
 
 
+		// Direction does not affect the decision on the following topologies which is always random
 		case TOPOLOGY_MESH:
 
-			receiver = (int)(n_prc_tot * Random());
+			target = (int)(region_c * direction);
 			break;
-
 
 
 		case TOPOLOGY_BIDRING:
 
-			u = Random();
-
-			if (u < 0.5) {
-				receiver = current_lp - 1;
+			if (Random() < 0.5) {
+				target = region_id - 1;
 			} else {
-				receiver= current_lp + 1;
+				target= region_id + 1;
 			}
 
-   			if (receiver == -1) {
-				receiver = n_prc_tot - 1;
+   			if (target == -1) {
+				target = region_c - 1;
 			}
 
 			// Can't be negative from now on
-			if ((unsigned int)receiver == n_prc_tot) {
-				receiver = 0;
+			if ((unsigned int)target == region_c) {
+				target = 0;
 			}
 
 			break;
 
 
-
 		case TOPOLOGY_RING:
 
-			receiver= current_lp + 1;
+			target = region_id + 1;
 
-			if ((unsigned int)receiver == n_prc_tot) {
-				receiver = 0;
+			if ((unsigned int)target == region_c) {
+				target = 0;
 			}
 
 			break;
@@ -213,10 +207,33 @@ unsigned int FindRegion(int topology) {
 
 		case TOPOLOGY_STAR:
 
-			if (current_lp == 0) {
-				receiver = (int)(n_prc_tot * Random());
+			if (region_id == 0) {
+				target = (int)(region_c * Random());
 			} else {
-				receiver = 0;
+				target = 0;
+			}
+
+			break;
+			
+
+		case TOPOLOGY_GRAPH:
+			// Throws a probability to randomly choose a new move.
+			// The algorithm compares the probability with the stack move's probability
+
+			// Gets the current region
+			region_id = agent_position[region_id];
+
+			// Rolls the dice
+			double prob = Random();
+			double stack = 0;
+			unsigned int index;
+			
+			for (index = 0; index < region_c; index++) {
+				stack += pmove[region_id * region_c + index];
+				if (prob < stack) {
+					// This direction has been chosen
+					target = index;
+				}
 			}
 
 			break;
@@ -225,7 +242,115 @@ unsigned int FindRegion(int topology) {
 			rootsim_error(true, "Wrong topology code specified: %d. Aborting...\n", topology);
 	}
 
-	return (unsigned int)receiver;
-
+	return (unsigned int)target;
 }
 
+
+/**
+ * Parses an input configuration file to setup the graph topology.
+ * The file structure must be the following:
+ * Source-node \t Destination-node \t Probability [0,1] to move form source to destination
+ *
+ * Note: this function will be executed once by the master thread (region's id == 0).
+ *
+ * @param filename The path of the configuration file
+ */
+void SetupGraph(const char *filename) {
+	FILE *file;
+	unsigned int source, destination;
+	double probability;
+	unsigned int row, col;
+	double sum;
+
+	// Check if this thread is the main one (region's id == 0)
+	if (tid != 0)
+		return;
+
+	// Open the file
+	file = fopen(filename, "r");
+	if (file == NULL) {
+		fprintf(stderr, "Error on opening the input confguration graph file\n");
+		exit(1);
+	}
+
+	// Allocates memory for the probability matrix
+	pmove = malloc(sizeof(double) * region_c * region_c);
+	bzero(pmove, region_c * region_c);
+
+	// Parses line by line
+	int match;
+	do {
+
+		match = fscanf(file, "%u\t%u\t%lf\n", &source, &destination, &probability);
+		
+		if (match < 0) {
+			break;
+		} else if (match < 3) {
+			fprintf(stderr, "Wrong graph specification in configuration file\n");
+			return;
+		}
+
+		pmove[source * region_c + destination] = probability;
+
+	} while (match > 0);
+
+	// Close the configuration file
+	fclose(file);
+
+	// Sanity check to verify whether the graph has been properly configured,
+	// namely the sum of each row must be 1
+	for (row = 0; row < region_c; row++) {
+
+		sum = 0;
+		for (col = 0; col < region_c; col++) {
+			sum += pmove[row * region_c + col];
+		}
+
+		if (sum > 1) {
+			// Probability cannot be granter than one
+			fprintf(stderr, "Error on configuration graph: overal probability cannot be granter than 1 (%u -> %u)", row, col);
+			exit(1);
+		} else if (sum < 1) {
+			// Probability may be less than 1, however it can also be a specification error,
+			// therefore it is better to notify the user; however the simulation proceeds
+			fprintf(stderr, "Warning, the overall probability of each move is less than 1");
+		}
+	}
+}
+
+
+void UseTopology(unsigned int _topology) {
+	topology = _topology;
+}
+
+
+unsigned int FindRegion(int topology) {
+
+	unsigned int direction;
+
+	// Basiong on the topology a random direction is chosen
+	switch (topology) {
+		case TOPOLOGY_HEXAGON:
+			direction = RandomRange(0, 5);
+		break;
+
+		case TOPOLOGY_SQUARE:
+			direction = RandomRange(0, 3);
+		break;
+	}
+
+	// Retrieve the target region's id
+	return get_target_id(current_lp, direction);
+}
+
+
+unsigned int GetTargetRegion(unsigned int region_id, unsigned int direction) {
+
+	if (region_id > region_c) {
+		fprintf(stderr, "Wrong region's id");
+		exit(1);
+	}
+
+	// Retrieve the target region's id
+	return get_target_id(region_id, direction);
+}
