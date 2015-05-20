@@ -9,9 +9,6 @@
 #include <float.h>
 
 
-#include <float.h>
-
-
 #define MAX_LPs	2048
 
 #define MAX_DATA_SIZE		16
@@ -24,6 +21,7 @@
 #define EXECUTION_EnvironmentInteraction	2
 #define EXECUTION_EnvironmentUpdate		3
 #define EXECUTION_Move				4
+
 
 typedef struct __msg_t
 {  
@@ -48,6 +46,7 @@ extern __thread unsigned int tid;
 
 /* Total number of cores required for simulation */
 extern unsigned int n_cores;
+
 /* Total number of logical processes running in the simulation */
 extern unsigned int n_prc_tot;
 
@@ -56,18 +55,6 @@ void init(unsigned int _thread_num, unsigned int);
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);
-
-extern void rootsim_error(bool fatal, const char *msg, ...);
-
-
-
-extern unsigned int n_prc_tot;
-
-//Esegue il loop del singolo thread
-void thread_loop(unsigned int thread_id);
-
-extern __thread simtime_t current_lvt;
-extern __thread unsigned int current_lp;
 
 extern void rootsim_error(bool fatal, const char *msg, ...);
 

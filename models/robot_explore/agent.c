@@ -1,12 +1,13 @@
 #include <math.h>
 #include <limits.h>
+#include <strings.h>
 
 #include "application.h"
 #include "agent.h"
 #include "region.h"
 
 
-static unsigned int opposite_direction_of(unsigned int direction) {
+unsigned int opposite_direction_of(unsigned int direction) {
 	unsigned int opposite;
 
 	switch(direction) {
@@ -36,7 +37,7 @@ static unsigned int opposite_direction_of(unsigned int direction) {
 	return opposite;
 }
 
-static char *direction_name(unsigned int direction) {
+char *direction_name(unsigned int direction) {
 
 	switch(direction) {
 		case NE:
@@ -61,7 +62,7 @@ static char *direction_name(unsigned int direction) {
 	return "UNKNOWN";
 }
 
-static double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *good_direction) {
+double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *good_direction) {
 	unsigned int i;
 	double min_distance = INFTY;
 	double current_distance;
@@ -129,7 +130,7 @@ static double a_star(agent_state_type *state, unsigned int current_cell, unsigne
 }
 
 
-static unsigned int compute_direction(agent_state_type *state) {
+unsigned int compute_direction(agent_state_type *state) {
 	unsigned int good_direction = UINT_MAX;
 
 	bzero(state->a_star_map, BITMAP_SIZE(number_of_regions));
@@ -166,7 +167,7 @@ static unsigned int compute_direction(agent_state_type *state) {
 }
 
 
-static unsigned int closest_frontier(agent_state_type *state, unsigned int exclude) {
+unsigned int closest_frontier(agent_state_type *state, unsigned int exclude) {
 	unsigned int i, j;
 	unsigned int x, y, curr_x, curr_y;
 	bool is_reachable;

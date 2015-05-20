@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <limits.h>
 
 #include <ABM.h>
 #include <dymelor.h>
@@ -50,9 +51,15 @@ __thread int execution_state = EXECUTION_IDLE;
 
 unsigned short int number_of_threads = 1;
 
-
+// API callbacks
 init_f agent_initialization;
 init_f region_initialization;
+
+interaction_f environment_interaction;
+interaction_f agent_interaction;
+
+update_f environment_update;
+
 
 unsigned int agent_c = 0;
 unsigned int region_c = 0;
@@ -61,9 +68,7 @@ unsigned int *agent_position;
 bool **presence_matrix; // Rows are cells, columns are agents
 
 __thread simtime_t current_lvt = 0;
-
 __thread unsigned int current_lp = 0;
-
 __thread unsigned int tid = 0;
 
 
@@ -193,6 +198,18 @@ void *GetAgentState(unsigned int agent) {
 	return states[region_c + agent];
 }
 
+// TODO: stub
+int GetNeighbours(unsigned int **neighbours) {
+	*neighbours = NULL;
+	return 0;
+}
+
+// TODO: stub
+void InitialPosition(unsigned int region) {
+	return;
+}
+
+
 static void process_init_event(void) {
   unsigned int i;
 
@@ -205,8 +222,7 @@ static void process_init_event(void) {
   
 }
 
-void init(unsigned int _thread_num, unsigned int lps_num)
-{
+void init(unsigned int _thread_num, unsigned int lps_num) {
   printf("Starting an execution with %u threads, %u LPs\n", _thread_num, lps_num);
   n_cores = _thread_num;
   n_prc_tot = lps_num;
@@ -234,8 +250,11 @@ bool check_termination(void) {
 	return ret;
 }
 
+
+// API implementation
 void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size) {
-	queue_insert(region, UINT_MAX, UINT_MAX, NULL, environment_interaction, time, EXECUTION_EnvironmentUpdate, args, size);
+	// DC: environment_interaction -> environment_update
+	queue_insert(region, UINT_MAX, UINT_MAX, NULL, environment_update, time, EXECUTION_EnvironmentUpdate, args, size);
 }
 
 void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size) {
@@ -250,11 +269,11 @@ void Move(unsigned int agent, unsigned int destination, simtime_t time) {
 	queue_insert(destination, agent, UINT_MAX, NULL, NULL, time, EXECUTION_Move, NULL, 0);
 }
 
-void thread_loop(unsigned int thread_id)
-{
-  int status;
+
+void thread_loop(unsigned int thread_id) {
+ // int status;
   unsigned int events;
-  revwin *revwin;
+  revwin *window;
   
 #ifdef FINE_GRAIN_DEBUG
    unsigned int non_transactional_ex = 0, transactional_ex = 0;
@@ -287,26 +306,25 @@ void thread_loop(unsigned int thread_id)
       {
 	  
 	  // Create a new revwin to record reverse instructions
-	  revwin = create_revwin(0);
+	  window = create_new_revwin(0);
 	  ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 	  #ifdef THROTTLING
           throttling(events);
 	  #endif
 	  
-	  while(!check_safety(current_lvt, &events))
-	  {
+	  while(!check_safety(current_lvt, &events)) {
 		  //TODO: check for wait_queue
 		  //TODO: check if there are other threads with less timestamp
-		  if(check_waiting()) {
-			execute_undo_event(revwin);
+		 /* if(check_waiting()) {
+			execute_undo_event(window);
 			break;
-		  }
+		  }*/
 	  }
 	}
 	
 	// Free current revwin
-	free_revwin(revwin);
+	free_revwin(window);
     flush();
  
     can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
@@ -326,7 +344,7 @@ void thread_loop(unsigned int thread_id)
     //printf("Timestamp %f executed\n", evt.timestamp);
   }
   
-  printf("Thread %d aborted %u times for cross check condition and %u for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
+  printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
   
 #ifdef FINE_GRAIN_DEBUG
   
@@ -339,7 +357,8 @@ void thread_loop(unsigned int thread_id)
 
 
 void *start_thread(void *args) {
-	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
+	//~int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
+	tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
 
 	thread_loop(tid);
 

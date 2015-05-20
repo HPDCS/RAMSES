@@ -1,6 +1,8 @@
 #ifndef __QUEUE_H
 #define __QUEUE_H
 
+#include <ABM.h>
+
 
 /* Struttura dati "Coda con priorità" per la schedulazione degli eventi (provissoria):
  * Estrazione a costo O(n)
@@ -13,7 +15,9 @@ typedef struct __msg_t msg_t;
 
 void queue_init(void);
 
-void queue_insert(unsigned int receiver, double timestamp, unsigned int event_type, void *event_content, unsigned int event_size);
+void queue_insert(unsigned int receiver, unsigned int entity1, unsigned int entity2,
+		  interaction_f interaction, update_f update,
+		  simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size);
 
 double queue_pre_min(void);
 

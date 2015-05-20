@@ -1,11 +1,23 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <strings.h>
+
 #include <ABM.h>
 
 #include "application.h"
+#include "agent.h"
+#include "region.h"
 
+// Global variables
 unsigned int number_of_agents = 1;
 unsigned int number_of_regions = 1;
+
+// Declaration of the client side callback functions
+void *agent_init(unsigned int id);
+void *region_init(unsigned int id);
+void agent_interaction(unsigned int agent_a, unsigned int agent_b, simtime_t now, void *args, size_t size);
+void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t now, void *args, size_t size);
+void update_region(unsigned int region_id, simtime_t now, void *args, size_t size);
 
 /**
  * Initializes a new agent with the specified id.
@@ -20,21 +32,24 @@ void *agent_init(unsigned int id) {
 	state = malloc(sizeof(agent_state_type));
 	if (state == NULL) {
 		// Malloc has failed, no memory can be allocated
-		rootsim_error(true, "Unable to allocate memory for a new agent\n");
+		printf("Unable to allocate memory for a new agent\n");
+		exit(1);
 	}
 	bzero(state, sizeof(agent_state_type));
 	
 	// Initializes visit map
 	state->visit_map = malloc(number_of_regions * sizeof(map_t));
 	if (state->visit_map == NULL) {
-		rootsim_error(true, "Unable to allocate memory for agent's map\n");
+		printf("Unable to allocate memory for a new agent\n");
+		exit(1);
 	}
 	bzero(state->visit_map, number_of_regions * sizeof(map_t));
 	
 	// Initializes visit map
 	state->a_star_map = malloc(number_of_regions * sizeof(map_t));
 	if (state->a_star_map == NULL) {
-		rootsim_error(true, "Unable to allocate memory for agent's choosing map\n");
+		printf("Unable to allocate memory for a new agent\n");
+		exit(1);
 	}
 	bzero(state->a_star_map, number_of_regions * sizeof(map_t));
 	
@@ -43,7 +58,7 @@ void *agent_init(unsigned int id) {
 	InitialPosition(RandomRange(0, number_of_regions));
 	
 	// Fires the initial interaction event
-	EnvironmentInteraction(id, state->current_cell, region_interaction, 0, NULL, 0);
+	EnvironmentInteraction(id, state->current_cell, 0, region_interaction, NULL, 0);
 	
 	return state;
 }
@@ -59,17 +74,18 @@ void *agent_init(unsigned int id) {
 void *region_init(unsigned int id) {
 	cell_state_type *state = NULL;
 	
-	state = malloc(sizeof(region_state_type));
+	state = malloc(sizeof(cell_state_type));
 	if (state == NULL) {
 		// Malloc has failed, no memory can be allocated
-		rootsim_error(true, "Unable to allocate memory for a new region\n");
+		printf("Unable to allocate memory for a new agent\n");
+		exit(1);
 	}
-	bzero(state, sizeof(region_state_type));
+	bzero(state, sizeof(cell_state_type));
 	
 	// Setup region properties, i.e. obstacles
 	// Chooeses randomly if the current region has an obstacle or not
 	if (Random() < OBSTACLE_PROB) {
-		state->has_obstacle = true;
+		state->has_obstacles = true;
 	}
 	
 	// Fires the initial interaction event
@@ -113,10 +129,9 @@ void agent_interaction(unsigned int agent_a, unsigned int agent_b, simtime_t now
  * @param size Size (in bytes) of the arguments vector
  */
 void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t now, void *args, size_t size) {
-	agent_state_type agent;
-	agent_state_type mate;
-	cell_state_type region;
-	map_t map;
+	agent_state_type *agent, *mate;
+	cell_state_type *region;
+	map_t *map;
 	
 	unsigned int number_of_mates;
 	unsigned int **mates;
@@ -131,7 +146,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	agent = GetAgentState(agent_id);
 	
 	// Updates robot's knowledge
-	map = agent->visit_map[region_id];
+	map = &(agent->visit_map[region_id]);
 	if (!map->visited) {
 		// If the region has not yet visited, then mark it and increment the counter
 		map->visited = true;
@@ -159,7 +174,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 		for (index = 0; index < number_of_mates; index ++) {
 			// TODO: schedulare un evento AgentInteraction invece che gestirlo direttamente quì?
 		
-			mate = GetAgentState(mates[index]);
+			mate = GetAgentState(*(mates[index]));
 			
 			// Computes and exchanges map's diff, at the same time
 			// when a view exchange takes palce, 'updated' robot's target
@@ -191,14 +206,14 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	
 	// If computed direction is UINT_MAX, then there is no path to the target.
 	// Just take a random direction
-	if(!is_reachable(state->current_cell, state->direction)) {
+	if(!is_reachable(agent->current_cell, agent->direction)) {
 		do {
-			state->direction = RandomRange(0, 5);
-		} while(!is_reachable(state->current_cell, state->direction));
+			agent->direction = RandomRange(0, 5);
+		} while(!is_reachable(agent->current_cell, agent->direction));
 	}
 	
 	// Get the region's id from the knowledge of current cell and the chosen direction
-	step_cell = get_target_id(state->current_cell, state->direction);
+	step_cell = get_target_id(agent->current_cell, agent->direction);
 	step_time = now + Expent(AGENT_TIME_STEP);
 	
 	// Schedule a new intercation event between the agent and the next region
@@ -224,14 +239,17 @@ void update_region(unsigned int region_id, simtime_t now, void *args, size_t siz
 }
 
 
-int main(int argc, argv char**) {
+int main(int argc, char** argv) {
 	// TODO: gestione dei parametri?
+
+	// TODO: gestire dinamicamente il numero di threads
+	unsigned int number_of_threads = 1;
 
 	// Setup of the simulation model
 	Setup(number_of_agents, agent_init, number_of_regions, region_init);
 	
 	// Starting the simulation process
-	StartSimulation();
+	StartSimulation(number_of_threads);
 
 	return 0;
 }

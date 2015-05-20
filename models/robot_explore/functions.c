@@ -20,8 +20,8 @@ void map_diff_exchange(agent_state_type *agent_a, agent_state_type *agent_b) {
 		// Checks if there is one region such that is visited
 		// by one agent and not by the other
 		
-		map_a = agent_a->visit_map[index];
-		map_b = agent_b->visit_map[index];
+		map_a = &(agent_a->visit_map[index]);
+		map_b = &(agent_b->visit_map[index]);
 		
 		// Exchange map informations and recomputes current frontier
 		if (map_a->visited && !map_b->visited) {

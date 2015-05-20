@@ -18,6 +18,6 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 
 unsigned int compute_my_direction(agent_state_type *state);
 
-unsigned int closest_frontier(agent_state_type *state, unsigned int curr_cell, unsigned int exclude);
+unsigned int closest_frontier(agent_state_type *state, unsigned int exclude);
 
 #endif // _AGENT_H

@@ -13,13 +13,13 @@ bool is_reachable(unsigned int region, unsigned int neighbour) {
 }
 
 
-static unsigned int map_hexagon_to_linear(unsigned int x, unsigned int y) {
+unsigned int map_hexagon_to_linear(unsigned int x, unsigned int y) {
 	unsigned int edge;
 
-	edge = sqrt(num_cells);
+	edge = sqrt(number_of_regions);
 
 	// Sanity checks
-	if(edge * edge != num_cells) {
+	if(edge * edge != number_of_regions) {
 		rootsim_error(true, "Hexagonal map wrongly specified!\n");
 	}
 	if(x > edge || y > edge) {
@@ -30,18 +30,18 @@ static unsigned int map_hexagon_to_linear(unsigned int x, unsigned int y) {
 }
 
 
-static void map_linear_to_hexagon(unsigned int linear, unsigned int *x, unsigned int *y) {
+void map_linear_to_hexagon(unsigned int linear, unsigned int *x, unsigned int *y) {
 	unsigned int edge;
 
-	edge = sqrt(num_cells);
+	edge = sqrt(number_of_regions);
 
 	// Sanity checks
-	if(edge * edge != num_cells) {
+	if(edge * edge != number_of_regions) {
 		printf("Hexagonal map wrongly specified!\n");
 		abort();
 	}
-	if(linear > num_cells) {
-		printf("Required cell %u is higher than the total number of cells %u\n", linear, num_cells);
+	if(linear > number_of_regions) {
+		printf("Required cell %u is higher than the total number of cells %u\n", linear, number_of_regions);
 		abort();
 	}
 

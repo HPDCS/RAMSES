@@ -1,4 +1,4 @@
-#ifdef HAVE_MIXED_SS
+//#ifdef HAVE_MIXED_SS
 
 
 #include <stdio.h>
@@ -8,21 +8,14 @@
 #include <sys/mman.h>
 #include <errno.h>
 
-#include <queues/reverse.h>
+#include <timer.h>
 
-#include <core/timer.h>
-#include <scheduler/scheduler.h>
-#include <statistics/statistics.h>
+#include "reverse.h"
 
-static __thread unsigned int revgen_count;
+__thread revwin * current_revwin;			//! Pointer to the current reversion window
 
-//static int timestamp = 0;		//! This is the counter used to infer which instructions have to be reversed
-//static int current_era = -1;		//! Represents the current era to which the reverse heap refers to
-//static int last_era = -1;		//! Specifies the last era index. It is initialized to 1 in order to first create the window
-static __thread addrmap hashmap;	//! Map of the referenced addresses
-//static eras history;			//! Collects the reverse windows along the eras
-
-__thread revwin * current_revwin;	//! Pointer to the current reversion window
+static __thread unsigned int revgen_count;	//! ??
+static __thread addrmap hashmap;			//! Map of the referenced addresses
 
 
 /**
@@ -67,7 +60,6 @@ static inline revwin *allocate_reverse_window (size_t size) {
 	char push = 0x58;
 	char ret = 0xc3;
 
-//	printf("chiamo allocate_reverse\n");
 	current_revwin = malloc(sizeof(revwin));
 	if(current_revwin == NULL) {
 		perror("Out of memroy!");
@@ -75,13 +67,9 @@ static inline revwin *allocate_reverse_window (size_t size) {
 	}
 
 	current_revwin->size = size;
-//	current_revwin->prot = PROT_EXEC | PROT_READ;
-//	current_revwin->flags = MAP_PRIVATE | MAP_ANONYMOUS;
 	current_revwin->address = mmap(NULL, size, PROT_WRITE | PROT_EXEC | PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	current_revwin->pointer = (void *)((char *)current_revwin->address + size - 1);
 
-//	printf("mmap returned %p\n", current_revwin->address);
-//	fflush(stdout);
 
 	if(current_revwin->address == MAP_FAILED) {
 		perror("mmap failed");
@@ -99,21 +87,6 @@ static inline revwin *allocate_reverse_window (size_t size) {
 	// TODO: modificare la gestione di last_free come negli unix file descriptor
 	// check if the entry is empty, if this is the case then fill it up with the new
 	// window, otherwise it aborts. Note: the last free slot pointer will be incremented
-
-	// check if space is enough, otherwise it aborts
-/*	if(history.last_free >= sizeof(history.era)){
-		perror("too much eras");
-		abort();
-	}
-
-	if(history.era[history.last_free] == NULL){
-		history.era[history.last_free] = window;
-		history.last_free++;
-	} else {
-		perror("unable to get era's descriptor");
-		abort();
-	}
-*/
 
 	return current_revwin;
 }
@@ -138,7 +111,6 @@ static inline revwin *allocate_reverse_window (size_t size) {
 static inline void create_reverse_instruction (uint64_t address, uint64_t value, size_t size) {
 	char mov[12];		// MOV instruction bytes (at most 9 bytes)
 	char mov2[12];		// second MOV in case of quadword data
-//	int flags = 0;			// TODO: are they necessary? in case move to param
 	size_t mov_size;
 
 	
@@ -204,19 +176,6 @@ static inline void create_reverse_instruction (uint64_t address, uint64_t value,
 			return;
 		}
 
-	// generate the compare-jump couple instructions to address the issue
-	// of reverse accordingly to a timestamp specification
-	/*if (flags) {
-		cmp[0] = 0x48;		// 64-bit prefix
-		cmp[1] = 0x83;		// opcode for the cmp imm32, reg64
-		cmp[2] = 0xf9;		// reg is rcx (the idea is to use timestamp as paramter
-		memcpy(cmp+3, &timestamp, sizeof(timestamp));	// actual timestamp to compare with (autoincrement)
-		timestamp++;
-
-		jc[0] = 0x74;		// JZ opcode with imm8
-		jc[1] = 0x00;		// displacement to the next instruction TODO: mhhh.. i don't know actually
-	}*/
-
 	// now 'mov' contains the bytes that represents the reverse MOV
 	// hence it has to be written on the heap reverse window
 	add_reverse_insn(mov, mov_size);
@@ -225,11 +184,6 @@ static inline void create_reverse_instruction (uint64_t address, uint64_t value,
 	}
 }
 
-/*void dump_revwin () {
-	// print the heap in order to report reverse instrucionts
-	printf("=> Dump of the current reverse heap window [%d]:\n", last_era);
-	printf("\n");
-}*/
 
 /**
  * Check if the address is dirty by looking at the hash map. In case the address
@@ -305,22 +259,12 @@ void reverse_code_generator (void *address, unsigned int size) {
 			value = *((uint64_t *) address);
 			break;
 	}
-//	memcpy(&value, address, size);
 
 
 	// now the idea is to generate the reverse MOV instruction that will
 	// restore the previous value 'value' stored in the memory address
 	// based on the operand size selects the proper MOV instruction bytes
 	create_reverse_instruction(address, value, size);
-	
-	// Collecting statistics
-	revgen_time = timer_value_micro(reverse_instruction_generation);
-	statistics_post_lp_data(current_lp, STAT_REVGEN_TIME, revgen_time);
-	statistics_post_lp_data(current_lp, STAT_REVGEN, ++revgen_count);
-
-	//dump_revwin();
-
-	//~ printf("==============================\n\n");
 }
 
 
@@ -407,6 +351,6 @@ void finalize_revwin(void) {
 	add_reverse_insn(&pop, 1);
 }
 
-#endif /* HAVE_MIXED_SS */
+//#endif /* HAVE_MIXED_SS */
 
 

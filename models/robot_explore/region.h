@@ -1,5 +1,7 @@
 #ifndef _REGION_H
-#def _REGION_H
+#define _REGION_H
+
+#include <stdbool.h>
 
 #define OBSTACLE_PROB	0.1
 #define REGION_KEEP_ALIVE_INTERVAL 50
