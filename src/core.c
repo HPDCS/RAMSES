@@ -178,6 +178,7 @@ void hill_climbing(void) {
 }
 
 
+// TODO: ?
 void SetState(void *ptr) {
 	states[current_lp] = ptr;
 }
@@ -236,19 +237,37 @@ void InitialPosition(unsigned int region) {
 }
 
 
-// TODO: come gestire con la nuova struttura ?
 static void process_init_event(void) {
-  unsigned int i;
+	unsigned int index;
+	unsigned int agent;
 
-  for(i = 0; i < region_c; i++) {
-    current_lp = i;
-    current_lvt = 0;
-    
-//    ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
+	// Regions' and agents' states are held by the variabile 'states', which is a linear
+	// array; therefore it coalesces all the states together:
+	// first all the regions, then all the agents
 
-    queue_deliver_msgs(); 
-  }
-  
+	// Sets up REGIONS
+	for (index = 0; index < region_c; index++) {
+		current_lp = index;
+		current_lvt = 0;
+
+//		ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
+
+		// Calls registered callback function to initialize the regions.
+		// Callback function will return the pointer to the initialized region's state
+		states[index] = region_initialization(index);
+
+		queue_deliver_msgs(); 
+	}
+
+	// Sets up AGENTS
+	for (agent = 0; agent < agent_c; agent++, index++) {
+
+		// Calls registered callback function to initialize the agents.
+		// Callback function will return the pointer to the initialized agent's state
+		states[index] = agent_initialization(agent);
+
+		queue_deliver_msgs(); 
+	}
 }
 
 void init(unsigned int _thread_num, unsigned int lps_num) {
