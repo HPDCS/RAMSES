@@ -245,11 +245,13 @@ int main(int argc, char** argv) {
 	// TODO: gestire dinamicamente il numero di threads
 	unsigned int number_of_threads = 1;
 
+	printf("main\n");
+
 	// Setup of the simulation model
-	Setup(number_of_agents, agent_init, number_of_regions, region_init);
+//	Setup(number_of_agents, agent_init, number_of_regions, region_init);
 	
 	// Starting the simulation process
-	StartSimulation(number_of_threads);
+//	StartSimulation(number_of_threads);
 
 	return 0;
 }

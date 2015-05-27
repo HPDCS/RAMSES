@@ -13,7 +13,8 @@ libabm_a_SOURCES =	calqueue.c \
 			numerical.c \
 			queue.c \
 			topology.c \
-			reverse.c
+			reverse.c \
+			function_map.c
 
 libabm_mm_a_SOURCES = 	allocator.c \
 			dymelor.c \

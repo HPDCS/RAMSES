@@ -244,7 +244,7 @@ static void process_init_event(void) {
     current_lp = i;
     current_lvt = 0;
     
-    ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
+//    ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
 
     queue_deliver_msgs(); 
   }
@@ -327,7 +327,7 @@ void thread_loop(unsigned int thread_id) {
       if(check_safety(current_lvt, &events))
       {
 	  
-	  ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+//	  ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 	
 #ifdef FINE_GRAIN_DEBUG
 	__sync_fetch_and_add(&non_transactional_ex, 1);
@@ -338,7 +338,7 @@ void thread_loop(unsigned int thread_id) {
 	  
 	  // Create a new revwin to record reverse instructions
 	  window = create_new_revwin(0);
-	  ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+//	  ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 	  #ifdef THROTTLING
           throttling(events);
@@ -358,7 +358,7 @@ void thread_loop(unsigned int thread_id) {
 	free_revwin(window);
     flush();
  
-    can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
+//    can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
     stop = check_termination();
 
     #ifdef THROTTLING
