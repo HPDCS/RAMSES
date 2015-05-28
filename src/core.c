@@ -258,7 +258,7 @@ static void process_init_event(void) {
 
 		// Calls registered callback function to initialize the regions.
 		// Callback function will return the pointer to the initialized region's state
-		states[index] = region_initialization(index);
+		states[index] = (*region_initialization)(index);
 
 		queue_deliver_msgs(); 
 	}
@@ -274,7 +274,7 @@ static void process_init_event(void) {
 
 		// Calls registered callback function to initialize the agents.
 		// Callback function will return the pointer to the initialized agent's state
-		states[index] = agent_initialization(agent);
+		states[index] = (*agent_initialization)(agent);
 
 		queue_deliver_msgs(); 
 	}
