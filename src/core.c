@@ -233,6 +233,10 @@ int GetNeighbours(unsigned int **neighbours) {
 
 // TODO: stub
 void InitialPosition(unsigned int region) {
+	// TODO: manca la nozione dell'id dell'agente, però....
+	// TODO: agent is the id of the current agent
+	agent_position[agent] = region;
+	presence_matrix[region][agent] = true;
 	return;
 }
 
@@ -456,16 +460,22 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 		exit(EXIT_FAILURE);
 	}
 
-	agent_c = agentc;
-	agent_initialization = agent_init;
-	region_c = regionc;
-	region_initialization = region_init;
-
+	// Initialize the two structure which hold region and agent reciprocal positions
+	// Note: agent_position is initialized with '-1', therefore it is possible to
+	// check whether the application has invoked also the InitialPosition which set it,
+	// otherwise the agent will be simply disposed.
 	agent_position = malloc(sizeof(unsigned int) * agentc);
-	bzero(agent_position, sizeof(unsigned int) * agentc);
+	memset(agent_position, -1,  sizeof(unsigned int) * agentc);
 	presence_matrix = malloc(sizeof(bool *) * regionc);
 	for(i = 0; i < regionc; i++) {
 		presence_matrix[i] = malloc(sizeof(bool) * agentc);
 		bzero(presence_matrix[i], sizeof(bool) * agentc);
 	}
+
+	// Once the structres have been properly initialized it calls the setup function
+	// provided as callback by the application
+	agent_c = agentc;
+	agent_initialization = agent_init;
+	region_c = regionc;
+	region_initialization = region_init;
 }
