@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <core.h>
 
@@ -15,44 +17,83 @@ static fmap *function_map;
 static char *prog_name;
 
 void initialize_map(int argc, char **argv, char **envp) {
-	char cmd[1024];
+	char buff[1024];
 	int num_functions;
-	int i;
+	int i = 0;
 	prog_name = argv[0];
 	FILE *f;
+	unsigned long address;
+	char *truncate_ptr;
 
-	printf("AAAAAAAAAAAAA\n");
+	int dummy_int;
+	char dummy_string[128];
 
-	return;
-	
+	(void)argc;
+	(void)envp;
+
+	printf("----------ABMSim Initialization-----------\n");
+
+	printf("My program name is %s\n", prog_name);
+
 	// Get the number of functions to initialize the vector
-	snprintf(cmd, 1024, "readelf -a %s | grep FUNC | grep -v UND | grep \"_memtrack\" | wc -l > dump", prog_name);
-	system(cmd);
+	snprintf(buff, 1024, "readelf -a %s | grep FUNC | grep -v UND | grep \"_reverse\" | wc -l > dump", prog_name);
+	system(buff);
 	
 	// read file and set num_functions
 	f = fopen("dump", "r");
 	fscanf(f, "%d", &num_functions);
 	fclose(f);
 
-	printf("NUmero di funzioni: %d\n", num_functions);
-	return;
-	
+	printf("Number of reverse functions: %d\n", num_functions);
 	
 	function_map = malloc(sizeof(fmap) * num_functions);
+	bzero(function_map, sizeof(fmap) * num_functions);
 	
 	// Get the number of functions to initialize the vector
-	snprintf(cmd, 1024, "readelf -a %s | grep FUNC | grep -v UND | grep \"_memtrack\" > dump", prog_name);
-	system(cmd);
+	snprintf(buff, 1024, "readelf -a %s | grep FUNC | grep -v UND | grep \"_reverse\" > dump", prog_name);
+	system(buff);
 	
-	// strtok on lines
-	
+	// Get the addresses of reverse functions
+	f = fopen("dump", "r");
+	while (fgets(buff, 1024, f) != NULL) {
+//		printf("\t%s\n", buff);
+		sscanf(buff, "%d: %lx %d %s %s %s %d %s\n", &dummy_int, &address, &dummy_int, dummy_string, dummy_string, dummy_string, &dummy_int, function_map[i].function_name);
+		function_map[i].instrumented_address = (void *)address;
+		truncate_ptr = strstr(function_map[i].function_name, "_reverse");
+		if(truncate_ptr == NULL) {
+			fprintf(stderr, "%s:%d: Error in initalization\n", __FILE__, __LINE__);
+			exit(EXIT_FAILURE);
+		}
+		*truncate_ptr = '\0';
+//		printf("%s at %x\n", function_map[i].function_name, function_map[i].instrumented_address);
+		i++;
+	}
+	fclose(f);
+
 	// Get non-instrumented addresses
 	for(i = 0; i < num_functions; i++) {
-		snprintf(cmd, 1024, "readelf -a %s | grep FUNC | grep -v UND | grep -v \"_memtrack\" | grep %s > dump", prog_name, function_map[i].function_name);
-		system(cmd);
+		snprintf(buff, 1024, "readelf -a %s | grep FUNC | grep -v UND | grep -v \"_reverse\" | grep %s > dump", prog_name, function_map[i].function_name);
+		system(buff);
 		
-		// Strtok the line
+		f = fopen("dump", "r");
+		if(fgets(buff, 1024, f) == NULL) {
+			fprintf(stderr, "%s:%d: Error in initalization\n", __FILE__, __LINE__);
+                        exit(EXIT_FAILURE);
+		}
+
+		sscanf(buff, "%d: %lx %d %s %s %s %d %s\n", &dummy_int, &address, &dummy_int, dummy_string, dummy_string, dummy_string, &dummy_int, dummy_string);
+		function_map[i].original_address = (void *)address;
+		fclose(f);
+
+		printf("Function %s: original address: %p instrumented address: %p\n", function_map[i].function_name, function_map[i].original_address, function_map[i].instrumented_address);
 	}
+
+
+	
+
+	unlink("dump");
+
+	printf("----------------COMPLETE-----------------\n");
 }
 
 
