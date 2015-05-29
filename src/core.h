@@ -22,6 +22,8 @@
 #define EXECUTION_EnvironmentUpdate		3
 #define EXECUTION_Move				4
 
+#define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
+
 
 typedef struct __msg_t {  
   unsigned int sender_id;
@@ -52,8 +54,6 @@ extern bool **presence_matrix; // Rows are cells, columns are agents;
 /* Total number of cores required for simulation */
 extern unsigned int n_cores;
 
-
-void init(unsigned int _thread_num, unsigned int);
 
 //Esegue il loop del singolo thread
 void thread_loop(unsigned int thread_id);

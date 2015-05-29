@@ -8,12 +8,11 @@
 
 
 static simtime_t *current_time_vector;
-
 static simtime_t *outgoing_time_vector;
-
 static simtime_t *waiting_time_vector;
 
 extern int queue_lock;
+extern int *region_lock;
 
 
 void message_state_init(void)
@@ -23,6 +22,7 @@ void message_state_init(void)
   current_time_vector = malloc(sizeof(simtime_t) * n_cores);
   outgoing_time_vector = malloc(sizeof(simtime_t) * n_cores);
   waiting_time_vector = malloc(sizeof(simtime_t) * region_c);
+  region_lock = malloc(sizeof(int) * region_c);
   
   for(i = 0; i < n_cores; i++)	// TODO: n_cores -> ?
   {
@@ -32,21 +32,53 @@ void message_state_init(void)
 }
 
 void execution_time(simtime_t time) {
-	simtime_t wait_time;
+	unsigned int region;
+	simtime_t waiting_time;
+	bool retry;
 
+	// Gets the lock on the region
+	region = current_msg.receiver_id;
+
+	printf("INFO: Event with time %f tring to acquired lock on region %d\n", time, region);
+
+	if(__sync_lock_test_and_set(&region_lock[region], 1) == 1) {
+		// If the thread cannot acquire the lock, this means that another
+		// one is performing an event on that region; it has to register
+		// its event's timestamp on the waiting queue, if and only if that
+		// time is less then the possible already registerd one.
+
+		do {
+			waiting_time = waiting_time_vector[region];
+			retry = false;
+			
+			printf("INFO: Event %f is waiting for region %d\n", time, region);
+
+			if(waiting_time < time) {
+
+				retry = true;
+
+				// Register the current event's timestamp in the waiting queue via CAS
+				if(__sync_bool_compare_and_swap(UNION_CAST(&waiting_time, long long *), waiting_time, time))
+					break;
+			}
+			
+		} while(retry);
+
+		// Spins over the region_lock until the current event time is grater
+		// than the waiting one
+		while(time < waiting_time) {
+			while(__sync_lock_test_and_set(&region_lock[region], 1) == 1);
+		}
+	}
+
+	printf("INFO: Lock on region %d acquired by event %f\n", region, time);
+	
 	current_time_vector[tid] = time;
 	outgoing_time_vector[tid] = INFTY;
 
-	// If the timestamp of the actual event returned by the queue
-	// is not grater than the one already registered on the waiting
-	// array (number of region), than register itself, otherwise
-	// wait until the waiting vector for that region is freed.
-	do {
-		wait_time = waiting[current_lp];
-	} while (time > wait_time);
-	
-	while (__sync_val_compare_and_swap (&waiting[region], wait_time, time) == wait_time);
+	__sync_lock_release(&region_lock[region]);
 
+	printf("INFO: Lock on region %d released by event %f\n", region, time);
 //  if(input_tid != tid && outgoing_time_vector[input_tid] == time)
 //    outgoing_time_vector[input_tid] = INFTY;
 }
@@ -102,7 +134,7 @@ int check_safety(simtime_t time, unsigned int *events)
 
 bool check_waiting(simtime_t time) {
 	// Check for thread with less event's timestamp
-	return (waiting[current_lp] < time);
+	return (waiting_time_vector[current_lp] < time);
 }
 
 

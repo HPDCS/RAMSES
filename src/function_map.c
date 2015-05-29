@@ -111,17 +111,17 @@ static void call_it(void *f, msg_t *m) {
 
 		case EXECUTION_EnvironmentInteraction:
 			interaction = (interaction_f)f;
-			(*interaction)(m->entity1 m->timestamp, m->data, m->data_size);
+			(*interaction)(m->entity1, m->entity2, m->timestamp, m->data, m->data_size);
 			break;
 
 		case EXECUTION_EnvironmentUpdate:
 			update = (update_f)f;
-			(*interaction)(m->entity1, m->entity2, m->timestamp, m->data, m->data_size);
+			(*update)(m->entity1, m->timestamp, m->data, m->data_size);
 			break;
 
 		case EXECUTION_Move:
-			// Manca la callback?
-			(*interaction)(m->entity1, m->entity2, m->timestampe);
+			// Manca la callback!
+			//(*interaction)(m->entity1, m->entity2, m->timestamp);
 			break;
 
 		default:

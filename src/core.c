@@ -233,6 +233,9 @@ int GetNeighbours(unsigned int **neighbours) {
 
 // TODO: stub
 void InitialPosition(unsigned int region) {
+
+	printf("INFO: agent %d set in region %d\n", current_lp, region);
+	
 	// At this time, current_lp holds the current agent that is
 	// being initialized dureing the setup phase.
 	agent_position[current_lp] = region;
@@ -245,6 +248,9 @@ static void process_init_event(void) {
 	unsigned int index;
 	unsigned int agent;
 
+
+	printf("Initializing event manager...\n");
+
 	// Regions' and agents' states are held by the variabile 'states', which is a linear
 	// array; therefore it coalesces all the states together:
 	// first all the regions, then all the agents
@@ -252,6 +258,7 @@ static void process_init_event(void) {
 	// Sets up REGIONS
 	current_lvt = 0;
 	for(index = 0; index < region_c; index++) {
+		printf("Call application initializer callback for region %d...\n", index);
 //		current_lp = index;
 
 //		ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
@@ -265,6 +272,7 @@ static void process_init_event(void) {
 
 	// Sets up AGENTS
 	for(agent = 0; agent < agent_c; agent++, index++) {
+		printf("Call application initializer callback for agent %d...\n", agent);
 
 		// Temporary stores the agent's id in order to use it in the InitialPosition function.
 		// Note that this function should be called in the agent_initialization callback, during
@@ -280,11 +288,30 @@ static void process_init_event(void) {
 	}
 }
 
-void init(unsigned int _thread_num, unsigned int lps_num) {
+/*void init(unsigned int _thread_num, unsigned int lps_num) {
 	printf("Starting an execution with %u threads, %u LPs\n", _thread_num, lps_num);
 	n_cores = _thread_num;
 	region_c = lps_num;
 	states = malloc(sizeof(void *) * region_c);
+	can_stop = malloc(sizeof(bool) * region_c);
+
+#ifndef NO_DYMELOR
+	dymelor_init();
+#endif
+
+	queue_init();
+	message_state_init();
+	numerical_init();
+
+	//  queue_register_thread();
+	process_init_event();
+}*/
+
+
+void init() {
+	printf("Initializing internal structures...\n");
+	
+	states = malloc(sizeof(void *) * (region_c + agent_c));
 	can_stop = malloc(sizeof(bool) * region_c);
 
 #ifndef NO_DYMELOR
@@ -316,18 +343,22 @@ bool check_termination(void) {
 void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size) {
 	// DC: environment_interaction -> environment_update
 	queue_insert(region, UINT_MAX, UINT_MAX, NULL, environment_update, time, EXECUTION_EnvironmentUpdate, args, size);
+	printf("INFO: EnvironmentUpdate event queued\n");
 }
 
 void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size) {
 	queue_insert(region, agent, UINT_MAX, environment_interaction, NULL, time, EXECUTION_EnvironmentInteraction, args, size);
+	printf("INFO: EnvironmentInteraction event queued\n");
 }
 
 void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size) {
 	queue_insert(current_lp, agent_a, agent_b, agent_interaction, NULL, time, EXECUTION_AgentInteraction, args, size);
+	printf("INFO: AgentInteraction event queued\n");
 }
 
 void Move(unsigned int agent, unsigned int destination, simtime_t time) {
 	queue_insert(destination, agent, UINT_MAX, NULL, NULL, time, EXECUTION_Move, NULL, 0);
+	printf("INFO: Move event queued\n");
 }
 
 
@@ -355,7 +386,8 @@ void thread_loop(unsigned int thread_id) {
 
 	if(check_safety(current_lvt, &events) == 1) {
 
-	call_regular_function(&current_msg);
+		printf("INFO: Event at time %f is safe\n");
+		call_regular_function(&current_msg);
 
 //	ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
@@ -364,7 +396,8 @@ void thread_loop(unsigned int thread_id) {
 	__sync_fetch_and_add(&non_transactional_ex, 1);
 #endif
 	} else {
-	
+
+	printf("INFO: Event at time %f is not safe: running in reversible mode\n", current_msg.timestamp);
 	// Create a new revwin to record reverse instructions
 	window = create_new_revwin(0);
 
@@ -382,6 +415,7 @@ void thread_loop(unsigned int thread_id) {
 		// If some other thread is wating with a less event's timestp,
 		// then run a rollback and exit
 		if(check_waiting() == 1) {
+			printf("INFO: event at time %f must be undone: revesing...\n", current_msg.timestamp);
 			execute_undo_event(window);
 			break;
 		}
@@ -389,6 +423,7 @@ void thread_loop(unsigned int thread_id) {
 		// If the event is not yet safe continue to retry it safety
 		// hopoing that commit horizion eventually will progress
 		if(check_safety(current_lvt, &events) == 1) {
+			printf("INFO: Event at time %f has became safe: flushing...\n", current_msg.timestamp);
 			flush();
 			break;
 		}
@@ -448,6 +483,8 @@ void StartSimulation(unsigned short int number_of_threads) {
 		exit(EXIT_FAILURE);
 	}
 
+	printf("INFO: Simulation is starting...\n");
+
 	//Child thread
 	for(i = 0; i < number_of_threads - 1; i++) {
 		if((ret = pthread_create(&tid[i], NULL, start_thread, NULL)) != 0) {
@@ -467,6 +504,8 @@ void StartSimulation(unsigned short int number_of_threads) {
 
 void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f region_init) {
 	unsigned int i;
+
+	printf("INFO: Setting up simulation platform...\n");
 
 	if(regionc == 0) {
 		fprintf(stderr, "ERROR: Starting a simulation with no regions. Aborting...\n");
@@ -491,12 +530,16 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 		bzero(presence_matrix[i], sizeof(bool) * agentc);
 	}
 
+	printf("INFO: Setting up regions and agents...\n");
+
 	// Once the structres have been properly initialized it calls the setup function
 	// provided as callback by the application
 	agent_c = agentc;
 	agent_initialization = agent_init;
 	region_c = regionc;
 	region_initialization = region_init;
+
+	init();
 
 	// Check whether agents' position has been properly initialized by InitialPosition invocation
 	for(i = 0; i < agent_c; i++) {

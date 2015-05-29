@@ -28,7 +28,9 @@ void update_region(unsigned int region_id, simtime_t now, void *args, size_t siz
  */
 void *agent_init(unsigned int id) {
 	agent_state_type *state = NULL;
-	
+
+	printf("APP :: setup agent %d\n", id);
+
 	state = malloc(sizeof(agent_state_type));
 	if (state == NULL) {
 		// Malloc has failed, no memory can be allocated
@@ -55,7 +57,7 @@ void *agent_init(unsigned int id) {
 	
 	// Sets the starting region for the current agent
 	// It randomly chooses a region to settle the robot
-	InitialPosition(RandomRange(0, number_of_regions));
+	InitialPosition(RandomRange(0, number_of_regions - 1));
 	
 	// Fires the initial interaction event
 	EnvironmentInteraction(id, state->current_cell, 0, region_interaction, NULL, 0);
@@ -73,6 +75,8 @@ void *agent_init(unsigned int id) {
  */
 void *region_init(unsigned int id) {
 	cell_state_type *state = NULL;
+
+	printf("APP :: setup region %d\n", id);
 	
 	state = malloc(sizeof(cell_state_type));
 	if (state == NULL) {
@@ -107,6 +111,7 @@ void *region_init(unsigned int id) {
 void agent_interaction(unsigned int agent_a, unsigned int agent_b, simtime_t now, void *args, size_t size) {
 	// TODO: Da completare con l'inserimento della logica di scambio della mappa?
 	// Al momento è gestita da 'region_interaction'
+	printf("APP :: region_interaction between agent %d and agent %d\n", agent_a, agent_b);
 }
 
 
@@ -138,13 +143,24 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	simtime_t step_time;
 	
 	// TODO: come devono essere gestiti i parametri della funzione?
+
+	printf("APP :: region_interaction of agent %d in region %d\n", agent_id, region_id);
 	
 	// Retrieve the states given the identification numbers of both agent and region
 	region = GetRegionState(region_id);
 	agent = GetAgentState(agent_id);
+
+	if(agent == NULL) {
+		printf("Agent %d has been disposed\n", agent_id);
+		return;
+	}
 	
 	// Updates robot's knowledge
 	map = &(agent->visit_map[region_id]);
+	if (map == NULL) {
+		printf("Visit map is null!\n");
+		return;
+	}
 	if (!map->visited) {
 		// If the region has not yet visited, then mark it and increment the counter
 		map->visited = true;
@@ -231,11 +247,35 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 void update_region(unsigned int region_id, simtime_t now, void *args, size_t size) {
 	simtime_t step_time;
 
+	printf("APP :: update_region region %d\n", region_id);
 	// Compute the new simulation time at which the vent must be scheduled
 	step_time = now + (simtime_t) Expent(REGION_KEEP_ALIVE_INTERVAL);
 
 	// Schedule the new event
 	EnvironmentUpdate(region_id, step_time, update_region, NULL, 0);
+}
+
+
+/**
+ * It represents the callback invoked by the simulation platform whenever a new
+ * movement event has to be processed.
+ *
+ * @param agent_id The agent's id which is going to move
+ * @param region_id The destination region's id the agent would reach
+ * @param time Current simulation time
+ * @param args Pointer to a arguments vector
+ * @param size Size (in bytes) of the arguments vector
+ */
+void move(unsigned int agent_id, unsigned int region_id, simtime_t time, void* args, size_t size) {
+	cell_state_type *region;
+	agent_state_type *agent;
+
+	printf("APP :: move action\n");
+
+	// Gets the states
+	region = GetRegionState(region);
+	agent = GetAgentState(agent);
+
 }
 
 
@@ -245,13 +285,13 @@ int main(int argc, char** argv) {
 	// TODO: gestire dinamicamente il numero di threads
 	unsigned int number_of_threads = 1;
 
-	printf("main\n");
+	printf("APP :: main\n");
 
 	// Setup of the simulation model
-//	Setup(number_of_agents, agent_init, number_of_regions, region_init);
+	Setup(number_of_agents, agent_init, number_of_regions, region_init);
 	
 	// Starting the simulation process
-//	StartSimulation(number_of_threads);
+	StartSimulation(number_of_threads);
 
 	return 0;
 }

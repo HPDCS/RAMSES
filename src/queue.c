@@ -57,6 +57,7 @@ typedef struct __temp_thread_pool {
 __thread __temp_thread_pool _thr_pool  __attribute__ ((aligned (64)));
 
 int queue_lock = 0;
+int *region_lock;
 
 void queue_init(void)
 {  
@@ -177,30 +178,35 @@ double queue_deliver_msgs(void)
 }
 
 int queue_min(void) {
-  //event_pool_node *node_ret;
+	//event_pool_node *node_ret;
+	msg_t *node_ret;
 
-  while(__sync_lock_test_and_set(&queue_lock, 1))
-    while(queue_lock);
-  
-  msg_t *node_ret;
-  node_ret = calqueue_get();
-  if(node_ret == NULL) {
-    __sync_lock_release(&queue_lock);
-    return 0;
-  }
-  
-  memcpy(&current_msg, node_ret, sizeof(msg_t));
-  free(node_ret);
+	printf("INFO: Thread %d tring to acquire queue lock\n", tid);
 
-  __sync_lock_release(&queue_lock);
+	// Gets the minimum timestamp event from the queue
+	while(__sync_lock_test_and_set(&queue_lock, 1))
+		while(queue_lock);
 
-  execution_time(current_msg.timestamp);
+	printf("INFO: Thread %d has acquired queue lock\n", tid);
 
-  // TODO: take the region lock
-  
-  //__sync_lock_release(&queue_lock);
-  
-  return 1;
+	node_ret = calqueue_get();
+	if(node_ret == NULL) {
+		__sync_lock_release(&queue_lock);
+		return 0;
+	}
+
+	memcpy(&current_msg, node_ret, sizeof(msg_t));
+	free(node_ret);
+
+	__sync_lock_release(&queue_lock);
+
+	printf("INFO: Get event with time %f\n", current_msg.timestamp);
+
+	execution_time(current_msg.timestamp);
+
+	//__sync_lock_release(&queue_lock);
+
+	return 1;
   
     /*
   if(_queue.size == 0)
