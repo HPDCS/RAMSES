@@ -178,6 +178,7 @@ void hill_climbing(void) {
 }
 
 
+// TODO: ?
 void SetState(void *ptr) {
 	states[current_lp] = ptr;
 }
@@ -220,7 +221,7 @@ int GetNeighbours(unsigned int **neighbours) {
 	// Looks for all agents by scanning the list to fetch the exact id of each neighbour
 	for (agent_id = 0; agent_id < agent_c; agent_id++) {
 		if (agent_position[agent_id] == region_id) {
-			// This agent is currently in the same region
+			// Current agent is actually in the same region,
 			// therefore it will be added to the result list
 			*(neighbours)[agent_id] = agent_id;
 		}
@@ -232,23 +233,51 @@ int GetNeighbours(unsigned int **neighbours) {
 
 // TODO: stub
 void InitialPosition(unsigned int region) {
+	// In order to keep track of the current agent's id that
+	// has invoked this API, 'tid' variable is used.
+	agent_position[tid] = region;
+	presence_matrix[region][tid] = true;
 	return;
 }
 
 
-// TODO: come gestire con la nuova struttura ?
 static void process_init_event(void) {
-  unsigned int i;
+	unsigned int index;
+	unsigned int agent;
 
-  for(i = 0; i < region_c; i++) {
-    current_lp = i;
-    current_lvt = 0;
-    
-//    ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
+	// Regions' and agents' states are held by the variabile 'states', which is a linear
+	// array; therefore it coalesces all the states together:
+	// first all the regions, then all the agents
 
-    queue_deliver_msgs(); 
-  }
-  
+	// Sets up REGIONS
+	for(index = 0; index < region_c; index++) {
+		current_lp = index;
+		current_lvt = 0;
+
+//		ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
+
+		// Calls registered callback function to initialize the regions.
+		// Callback function will return the pointer to the initialized region's state
+		states[index] = region_initialization(index);
+
+		queue_deliver_msgs(); 
+	}
+
+	// Sets up AGENTS
+	for(agent = 0; agent < agent_c; agent++, index++) {
+
+		// Temporary stores the agent's id in order to use it in the InitialPosition function.
+		// Note that this function should be called in the agent_initialization callback, during
+		// the initialization phase; therefore it is safe to use 'tid' in the meanwhile, since
+		// no thread is actually up and no other execution flow would be started.
+		tid = agent;
+
+		// Calls registered callback function to initialize the agents.
+		// Callback function will return the pointer to the initialized agent's state
+		states[index] = agent_initialization(agent);
+
+		queue_deliver_msgs(); 
+	}
 }
 
 void init(unsigned int _thread_num, unsigned int lps_num) {
@@ -305,85 +334,82 @@ void Move(unsigned int agent, unsigned int destination, simtime_t time) {
 // Main loop
 void thread_loop(unsigned int thread_id) {
  // int status;
-  unsigned int events;
-  revwin *window;
+	unsigned int events;
+	revwin *window;
   
 #ifdef FINE_GRAIN_DEBUG
-   unsigned int non_transactional_ex = 0, transactional_ex = 0;
+	unsigned int non_transactional_ex = 0, transactional_ex = 0;
 #endif
   
-  tid = thread_id;
+	tid = thread_id;
   
-  while(!stop && !sim_error) {
+	while(!stop && !sim_error) {
 
-    if(queue_min() == 0) {
-      continue;
-    }
-    
+	if(queue_min() == 0) {
+	  continue;
+	}
+	
 
-    current_lp = current_msg.receiver_id;
-    current_lvt  = current_msg.timestamp;
+	current_lp = current_msg.receiver_id;
+	current_lvt  = current_msg.timestamp;
 
-      if(check_safety(current_lvt, &events))
-      {
-	  
-//	  ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+	if(check_safety(current_lvt, &events)) {
+	
+//	ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 	
 #ifdef FINE_GRAIN_DEBUG
 	__sync_fetch_and_add(&non_transactional_ex, 1);
 #endif
-      }
-      else
-      {
-	  
-	  // Create a new revwin to record reverse instructions
-	  window = create_new_revwin(0);
-//	  ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+	} else {
+	
+	// Create a new revwin to record reverse instructions
+	window = create_new_revwin(0);
+//		ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
-	  #ifdef THROTTLING
-          throttling(events);
-	  #endif
-	  
+	#ifdef THROTTLING
+		  throttling(events);
+	#endif
+	
 	  while(!check_safety(current_lvt, &events)) {
-		  //TODO: check for wait_queue
-		  //TODO: check if there are other threads with less timestamp
-		 /* if(check_waiting()) {
+		//TODO: check for wait_queue
+		//TODO: check if there are other threads with less timestamp
+		/* if(check_waiting()) {
 			execute_undo_event(window);
 			break;
-		  }*/
+		}*/
 	  }
 	}
 	
 	// Free current revwin
 	free_revwin(window);
-    flush();
+	flush();
  
-//    can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
-    stop = check_termination();
+//	can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
+	stop = check_termination();
 
-    #ifdef THROTTLING
-    if((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
-	    hill_climbing();
-    #endif
+	#ifdef THROTTLING
+	if((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
+		hill_climbing();
+	#endif
 
-    if(tid == _MAIN_PROCESS) {
-    	evt_count++;
+	if(tid == _MAIN_PROCESS) {
+		evt_count++;
 	if((evt_count - 10000 * (evt_count / 10000)) == 0)
 		printf("TIME: %f\n", current_lvt);
-    }
-        
-    //printf("Timestamp %f executed\n", evt.timestamp);
-  }
-  
-  printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
-  
+	}
+		
+	//printf("Timestamp %f executed\n", evt.timestamp);
+	}
+
+	printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
+
 #ifdef FINE_GRAIN_DEBUG
-  
-    printf("Thread %d executed in non-transactional block: %d\n"
-    "Thread executed in transactional block: %d\n", 
-    tid, non_transactional_ex, transactional_ex);
+
+	printf("Thread %d executed in non-transactional block: %d\n"
+	"Thread executed in transactional block: %d\n", 
+	tid, non_transactional_ex, transactional_ex);
 #endif
-  
+
 }
 
 
@@ -437,16 +463,32 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 		exit(EXIT_FAILURE);
 	}
 
+	// Initialize the two structure which hold region and agent reciprocal positions
+	// Note: agent_position is initialized with '-1', therefore it is possible to
+	// check whether the application has invoked also the InitialPosition which set it,
+	// otherwise the agent will be simply disposed.
+	agent_position = malloc(sizeof(unsigned int) * agentc);
+	memset(agent_position, -1,  sizeof(unsigned int) * agentc);
+
+	presence_matrix = malloc(sizeof(bool *) * regionc);
+	for(i = 0; i < regionc; i++) {
+		presence_matrix[i] = malloc(sizeof(bool) * agentc);
+		bzero(presence_matrix[i], sizeof(bool) * agentc);
+	}
+
+	// Once the structres have been properly initialized it calls the setup function
+	// provided as callback by the application
 	agent_c = agentc;
 	agent_initialization = agent_init;
 	region_c = regionc;
 	region_initialization = region_init;
 
-	agent_position = malloc(sizeof(unsigned int) * agentc);
-	bzero(agent_position, sizeof(unsigned int) * agentc);
-	presence_matrix = malloc(sizeof(bool *) * regionc);
-	for(i = 0; i < regionc; i++) {
-		presence_matrix[i] = malloc(sizeof(bool) * agentc);
-		bzero(presence_matrix[i], sizeof(bool) * agentc);
+	// Check whether agents' position has been properly initialized by InitialPosition invocation
+	for(i = 0; i < agent_c; i++) {
+		if (agent_position[i] < 0) {
+			// Agent has no position set up, discard it
+			rootsim_error(false, "Agent %d has no initial position set up; it will be disposed\n");
+			states[i] = NULL;	// TODO: da stabilire come procedere
+		}
 	}
 }
