@@ -130,30 +130,29 @@ static unsigned int get_target_id(unsigned int region_id, unsigned int direction
 			}
 
 			// Find a random neighbour
-			do {
-				switch(direction) {
-					case N:
-						nx = x;
-						ny = y - 1;
-						break;
-					case S:
-						nx = x;
-						ny = y + 1;
-						break;
-					case E:
-						nx = x + 1;
-						ny = y;
-						break;
-					case W:
-						nx = x - 1;
-						ny = y;
-						break;
-					default:
-						rootsim_error(true, "Met an impossible condition at %s:%d. Aborting...\n", __FILE__, __LINE__);
-				}
+			switch(direction) {
+				case N:
+					nx = x;
+					ny = y - 1;
+					break;
+				case S:
+					nx = x;
+					ny = y + 1;
+					break;
+				case E:
+					nx = x + 1;
+					ny = y;
+					break;
+				case W:
+					nx = x - 1;
+					ny = y;
+					break;
+				default:
+					rootsim_error(true, "Met an impossible condition at %s:%d. Aborting...\n", __FILE__, __LINE__);
+			}
 
-			// We don't check is nx < 0 || ny < 0, as they are unsigned and therefore overflow
-			} while(nx >= edge || ny >= edge);
+			if (nx >= edge || ny >= edge)
+				return -1;
 
 			// Convert back to linear coordinates
 			target = (ny * edge + nx);

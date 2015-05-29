@@ -123,6 +123,8 @@ void queue_insert(unsigned int receiver, unsigned int entity1, unsigned int enti
   msg_ptr->update = update;
 
   memcpy(msg_ptr->data, event_content, event_size);
+
+  queue_deliver_msgs();		// TODO: [DC] giusto aggiungerla qui?
 }
 
 double queue_pre_min(void)
@@ -196,8 +198,6 @@ int queue_min(void) {
 		__sync_lock_release(&queue_lock);
 		return 0;
 	}
-
-	printf("Dequeue event %f\n", node_ret->timestamp);
 
 	memcpy(&current_msg, node_ret, sizeof(msg_t));
 	free(node_ret);

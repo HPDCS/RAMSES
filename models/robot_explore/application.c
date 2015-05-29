@@ -9,8 +9,8 @@
 #include "region.h"
 
 // Global variables
-unsigned int number_of_agents = 1;
-unsigned int number_of_regions = 1;
+unsigned int number_of_agents = 4;
+unsigned int number_of_regions = 4;
 
 // Declaration of the client side callback functions
 void *agent_init(unsigned int id);
@@ -234,7 +234,15 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	// Get the region's id from the knowledge of current cell and the chosen direction
 	step_cell = get_target_id(agent->current_cell, agent->direction);
 	step_time = now + Expent(AGENT_TIME_STEP);
-	
+
+/*	// Check termination
+	if((double)agent->visited_cells / number_of_regions < 1.0) {
+		printf("Robot %d: %.02f percent --- %d meetings so far --- currently in cell %d\n", agent_id - number_of_regions,
+			(double)agent->visited_cells / number_of_regions * 100, agent->met_robots, agent->current_cell);
+			
+		StopSimulation();
+	}*/
+
 	// Schedule a new intercation event between the agent and the next region
 	EnvironmentInteraction(agent_id, step_cell, step_time, region_interaction, NULL, 0);
 }

@@ -501,6 +501,10 @@ void StartSimulation(unsigned short int number_of_threads) {
 }
 
 
+void StopSimulation() {
+	stop = true;
+}
+
 
 void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f region_init) {
 	unsigned int i;
