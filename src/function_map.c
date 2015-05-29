@@ -111,12 +111,12 @@ static void call_it(void *f, msg_t *m) {
 
 		case EXECUTION_EnvironmentInteraction:
 			interaction = (interaction_f)f;
-			(*interaction)(m->entity1, m->entity2, m->timestamp, m->data, m->data_size);
+			(*interaction)(m->receiver_id, m->entity1, m->timestamp, m->data, m->data_size);
 			break;
 
 		case EXECUTION_EnvironmentUpdate:
 			update = (update_f)f;
-			(*update)(m->entity1, m->timestamp, m->data, m->data_size);
+			(*update)(m->receiver_id, m->timestamp, m->data, m->data_size);
 			break;
 
 		case EXECUTION_Move:
