@@ -57,7 +57,8 @@ void *agent_init(unsigned int id) {
 	
 	// Sets the starting region for the current agent
 	// It randomly chooses a region to settle the robot
-	InitialPosition(RandomRange(0, number_of_regions - 1));
+	state->current_cell = RandomRange(0, number_of_regions - 1);
+	InitialPosition(state->current_cell);
 	
 	// Fires the initial interaction event
 	EnvironmentInteraction(id, state->current_cell, 0, region_interaction, NULL, 0);
