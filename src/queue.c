@@ -176,8 +176,7 @@ double queue_deliver_msgs(void)
 //  __sync_lock_release(&queue_lock);
 }
 
-int queue_min(void)
-{
+int queue_min(void) {
   //event_pool_node *node_ret;
 
   while(__sync_lock_test_and_set(&queue_lock, 1))
@@ -185,18 +184,21 @@ int queue_min(void)
   
   msg_t *node_ret;
   node_ret = calqueue_get();
-  if(node_ret == NULL)
-  {
+  if(node_ret == NULL) {
     __sync_lock_release(&queue_lock);
     return 0;
   }
   
   memcpy(&current_msg, node_ret, sizeof(msg_t));
   free(node_ret);
-  
-  execution_time(current_msg.timestamp);
-  
+
   __sync_lock_release(&queue_lock);
+
+  execution_time(current_msg.timestamp);
+
+  // TODO: take the region lock
+  
+  //__sync_lock_release(&queue_lock);
   
   return 1;
   

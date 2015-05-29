@@ -56,6 +56,9 @@ static unsigned short int number_of_threads = 1;
 static init_f agent_initialization;
 static init_f region_initialization;
 
+//unsigned int *lock_vector;			/// Tells whether one region has been locked by some thread
+unsigned int *waiting;		/// Maintains the successor thread waiting for that region
+//unsigned int *owner_vector;			/// Keeps track of the current owner of the region
 
 unsigned int agent_c = 0;
 unsigned int region_c = 0;
@@ -328,34 +331,6 @@ void Move(unsigned int agent, unsigned int destination, simtime_t time) {
 }
 
 
-/**
- * Call the actual interaction (or update function) proper of the current event.
- */
-static void process_event(bool reverse) {
-	// On the basis of the message type the proper callback function will be called
-	switch(current_msg.type) {
-		case EXECUTION_AgentInteraction:
-		case EXECUTION_EnvironmentInteraction:
-			(*current_msg.interaction)(current_msg.entity1, current_msg.entity2, current_msg.timestamp, current_msg.data, current_msg.data_size);
-		break;
-
-		case EXECUTION_EnvironmentUpdate:
-			(*current_msg.interaction)(current_msg.entity1, current_msg.timestamp, current_msg.data, current_msg.data_size);
-		break;
-
-		case EXECUTION_Move:
-			(*current_msg.interaction)(current_msg.entity1, current_msg.entity2, current_msg.timestamp);
-		break;
-
-		case EXECUTION_IDLE:
-
-		break;
-
-		default:
-			rootsim(false, "Unknown type of event\n");
-	}
-}
-
 // Main loop
 void thread_loop(unsigned int thread_id) {
  // int status;
@@ -378,11 +353,9 @@ void thread_loop(unsigned int thread_id) {
 	current_lp = current_msg.receiver_id;
 	current_lvt  = current_msg.timestamp;
 
-	if(check_safety(current_lvt, &events)) {
+	if(check_safety(current_lvt, &events) == 1) {
 
-		// If the event is considered safe, than plain callback will be invoked
-		interaction_callback = current_msg.interaction;
-		update_callback = current_msg.update;
+	call_regular_function(&current_msg);
 
 //	ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
@@ -394,25 +367,37 @@ void thread_loop(unsigned int thread_id) {
 	
 	// Create a new revwin to record reverse instructions
 	window = create_new_revwin(0);
+
+	call_instrumented_function(&current_msg);
 //		ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 	#ifdef THROTTLING
-		  throttling(events);
+		throttling(events);
 	#endif
-	
-	  while(!check_safety(current_lvt, &events)) {
-		//TODO: check for wait_queue
-		//TODO: check if there are other threads with less timestamp
-		/* if(check_waiting()) {
+
+	// Tries to commit actual event until thread finds out that
+	// someone else is waiting for the same region (current_lp)
+	// with a less timestamp. If this is the case, it does a rollback.
+	while(1) {
+		// If some other thread is wating with a less event's timestp,
+		// then run a rollback and exit
+		if(check_waiting() == 1) {
 			execute_undo_event(window);
 			break;
-		}*/
-	  }
+		}
+
+		// If the event is not yet safe continue to retry it safety
+		// hopoing that commit horizion eventually will progress
+		if(check_safety(current_lvt, &events) == 1) {
+			flush();
+			break;
+		}
 	}
-	
-	// Free current revwin
-	free_revwin(window);
-	flush();
+ 
+		// Free current revwin
+		free_revwin(window);
+	}
+
  
 //	can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
 	stop = check_termination();
