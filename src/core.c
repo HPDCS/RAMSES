@@ -72,9 +72,6 @@ __thread unsigned long long evt_count = 0;
 __thread unsigned long long evt_try_count = 0;
 __thread unsigned long long abort_count_conflict = 0, abort_count_safety = 0;
 
-unsigned int *lock_vector;			/// Tells whether one region has been locked by some thread
-unsigned int *waiting_vector;		/// Maintains the successor thread waiting for that region
-unsigned int *owner_vector;			/// Keeps track of the current owner of the region
 
 /* Total number of cores required for simulation */
 unsigned int n_cores;		// TODO: ?
@@ -233,10 +230,10 @@ int GetNeighbours(unsigned int **neighbours) {
 
 // TODO: stub
 void InitialPosition(unsigned int region) {
-	// In order to keep track of the current agent's id that
-	// has invoked this API, 'tid' variable is used.
-	agent_position[tid] = region;
-	presence_matrix[region][tid] = true;
+	// At this time, current_lp holds the current agent that is
+	// being initialized dureing the setup phase.
+	agent_position[current_lp] = region;
+	presence_matrix[region][current_lp] = true;
 	return;
 }
 
@@ -250,9 +247,9 @@ static void process_init_event(void) {
 	// first all the regions, then all the agents
 
 	// Sets up REGIONS
+	current_lvt = 0;
 	for(index = 0; index < region_c; index++) {
-		current_lp = index;
-		current_lvt = 0;
+//		current_lp = index;
 
 //		ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
 
@@ -270,7 +267,7 @@ static void process_init_event(void) {
 		// Note that this function should be called in the agent_initialization callback, during
 		// the initialization phase; therefore it is safe to use 'tid' in the meanwhile, since
 		// no thread is actually up and no other execution flow would be started.
-		tid = agent;
+		current_lp = agent;
 
 		// Calls registered callback function to initialize the agents.
 		// Callback function will return the pointer to the initialized agent's state
@@ -281,22 +278,22 @@ static void process_init_event(void) {
 }
 
 void init(unsigned int _thread_num, unsigned int lps_num) {
-  printf("Starting an execution with %u threads, %u LPs\n", _thread_num, lps_num);
-  n_cores = _thread_num;
-  region_c = lps_num;
-  states = malloc(sizeof(void *) * region_c);
-  can_stop = malloc(sizeof(bool) * region_c);
- 
+	printf("Starting an execution with %u threads, %u LPs\n", _thread_num, lps_num);
+	n_cores = _thread_num;
+	region_c = lps_num;
+	states = malloc(sizeof(void *) * region_c);
+	can_stop = malloc(sizeof(bool) * region_c);
+
 #ifndef NO_DYMELOR
-  dymelor_init();
+	dymelor_init();
 #endif
 
-  queue_init();
-  message_state_init();
-  numerical_init();
-  
-//  queue_register_thread();
-  process_init_event();
+	queue_init();
+	message_state_init();
+	numerical_init();
+
+	//  queue_register_thread();
+	process_init_event();
 }
 
 
@@ -331,6 +328,34 @@ void Move(unsigned int agent, unsigned int destination, simtime_t time) {
 }
 
 
+/**
+ * Call the actual interaction (or update function) proper of the current event.
+ */
+static void process_event(bool reverse) {
+	// On the basis of the message type the proper callback function will be called
+	switch(current_msg.type) {
+		case EXECUTION_AgentInteraction:
+		case EXECUTION_EnvironmentInteraction:
+			(*current_msg.interaction)(current_msg.entity1, current_msg.entity2, current_msg.timestamp, current_msg.data, current_msg.data_size);
+		break;
+
+		case EXECUTION_EnvironmentUpdate:
+			(*current_msg.interaction)(current_msg.entity1, current_msg.timestamp, current_msg.data, current_msg.data_size);
+		break;
+
+		case EXECUTION_Move:
+			(*current_msg.interaction)(current_msg.entity1, current_msg.entity2, current_msg.timestamp);
+		break;
+
+		case EXECUTION_IDLE:
+
+		break;
+
+		default:
+			rootsim(false, "Unknown type of event\n");
+	}
+}
+
 // Main loop
 void thread_loop(unsigned int thread_id) {
  // int status;
@@ -354,8 +379,13 @@ void thread_loop(unsigned int thread_id) {
 	current_lvt  = current_msg.timestamp;
 
 	if(check_safety(current_lvt, &events)) {
-	
+
+		// If the event is considered safe, than plain callback will be invoked
+		interaction_callback = current_msg.interaction;
+		update_callback = current_msg.update;
+
 //	ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+
 	
 #ifdef FINE_GRAIN_DEBUG
 	__sync_fetch_and_add(&non_transactional_ex, 1);

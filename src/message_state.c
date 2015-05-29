@@ -14,6 +14,11 @@ static simtime_t *outgoing_time_vector;
 extern int queue_lock;
 
 
+//unsigned int *lock_vector;			/// Tells whether one region has been locked by some thread
+unsigned int *waiting_vector;		/// Maintains the successor thread waiting for that region
+//unsigned int *owner_vector;			/// Keeps track of the current owner of the region
+
+
 void message_state_init(void)
 {
   unsigned int i;
@@ -84,6 +89,10 @@ int check_safety(simtime_t time, unsigned int *events)
 //  __sync_lock_release(&queue_lock);
   
   return ret;
+}
+
+int check_waiting() {
+	
 }
 
 
