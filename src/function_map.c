@@ -13,12 +13,11 @@ typedef struct _fmap {
 
 
 static fmap *function_map;
-
-static char *prog_name;
+static int num_functions;
 
 void initialize_map(int argc, char **argv, char **envp) {
+	char *prog_name;
 	char buff[1024];
-	int num_functions;
 	int i = 0;
 	prog_name = argv[0];
 	FILE *f;
@@ -100,10 +99,73 @@ void initialize_map(int argc, char **argv, char **envp) {
 __attribute__((section(".preinit_array"))) __typeof__(initialize_map) *__initialize_map = initialize_map;
 
 
+static void call_it(void *f, msg_t *m) {
+	interaction_f interaction;
+	update_f update;
+
+	switch(m->type) {
+		case EXECUTION_AgentInteraction:
+			interaction = (interaction_f)f;
+			break;
+
+		case EXECUTION_EnvironmentInteraction:
+			interaction = (interaction_f)f;
+			break;
+
+		case EXECUTION_EnvironmentUpdate:
+			update = (update_f)f;
+			break;
+
+		case EXECUTION_Move:
+			break;
+
+		default:
+			fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
+	                exit(EXIT_FAILURE);
+	}
+}
+
+
 void call_instrumented_function(msg_t *m) {
-	// 
+	void *function = NULL;
+	int i;
+
+	if(m->interaction != NULL) {
+		function = m->interaction;
+	} else if (m->update != NULL) {
+		function = m->update;
+	} else {
+		fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
+		exit(EXIT_FAILURE);
+	}
+
+	// Find the instrumented function
+	for(i = 0; i < num_functions; i++) {
+		if(function_map[i].original_address == function) {
+			function = function_map[i].instrumented_address;
+			goto do_call;
+		}
+	}
+
+	fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
+        exit(EXIT_FAILURE);
+	
+   do_call:
+	call_it(function, m);
 }
 
 void call_regular_function(msg_t *m) {
-	// select 
+	void *function = NULL;
+
+        if(m->interaction != NULL) {
+                function = m->interaction;
+        } else if (m->update != NULL) {
+                function = m->update;
+        } else {
+                fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
+                exit(EXIT_FAILURE);
+        }
+
+        call_it(function, m);
+
 }
