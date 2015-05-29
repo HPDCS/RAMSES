@@ -28,6 +28,7 @@ void update_region(unsigned int region_id, simtime_t now, void *args, size_t siz
  */
 void *agent_init(unsigned int id) {
 	agent_state_type *state = NULL;
+	simtime_t start_time;
 
 	printf("APP :: setup agent %d\n", id);
 
@@ -61,7 +62,8 @@ void *agent_init(unsigned int id) {
 	InitialPosition(state->current_cell);
 	
 	// Fires the initial interaction event
-	EnvironmentInteraction(id, state->current_cell, 0, region_interaction, NULL, 0);
+	start_time = Expent(AGENT_TIME_STEP);
+	EnvironmentInteraction(id, state->current_cell, start_time, region_interaction, NULL, 0);
 	
 	return state;
 }
@@ -76,6 +78,7 @@ void *agent_init(unsigned int id) {
  */
 void *region_init(unsigned int id) {
 	cell_state_type *state = NULL;
+	simtime_t start_time;
 
 	printf("APP :: setup region %d\n", id);
 	
@@ -94,7 +97,8 @@ void *region_init(unsigned int id) {
 	}
 	
 	// Fires the initial interaction event
-	EnvironmentUpdate(id, 0, update_region, NULL, 0);
+	start_time = 10 * Random();
+	EnvironmentUpdate(id, start_time, update_region, NULL, 0);
 	
 	return state;
 }
@@ -212,18 +216,18 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 		
 		// If no good choice is available, choose a random one
 		if (agent->target_cell == UINT_MAX) {
-			agent->target_cell = RandomRange(0, number_of_regions);
+			agent->target_cell = RandomRange(0, number_of_regions - 1);
 		}
 	}
 	
 	// Compute a direction to move towards
-	agent->direction = compute_direction();
+	agent->direction = compute_direction(agent);
 	
 	// If computed direction is UINT_MAX, then there is no path to the target.
 	// Just take a random direction
 	if(!is_reachable(agent->current_cell, agent->direction)) {
 		do {
-			agent->direction = RandomRange(0, 5);
+			agent->direction = RandomRange(0, 3);
 		} while(!is_reachable(agent->current_cell, agent->direction));
 	}
 	
@@ -287,6 +291,9 @@ int main(int argc, char** argv) {
 	unsigned int number_of_threads = 1;
 
 	printf("APP :: main\n");
+
+	// Setup the topology
+	UseTopology(TOPOLOGY_SQUARE);
 
 	// Setup of the simulation model
 	Setup(number_of_agents, agent_init, number_of_regions, region_init);

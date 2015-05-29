@@ -183,19 +183,21 @@ int queue_min(void) {
 	//event_pool_node *node_ret;
 	msg_t *node_ret;
 
-	printf("INFO: Thread %d tring to acquire queue lock\n", tid);
+//	printf("INFO: Thread %d tring to acquire queue lock\n", tid);
 
 	// Gets the minimum timestamp event from the queue
 	while(__sync_lock_test_and_set(&queue_lock, 1))
 		while(queue_lock);
 
-	printf("INFO: Thread %d has acquired queue lock\n", tid);
+//	printf("INFO: Thread %d has acquired queue lock\n", tid);
 
 	node_ret = calqueue_get();
 	if(node_ret == NULL) {
 		__sync_lock_release(&queue_lock);
 		return 0;
 	}
+
+	printf("Dequeue event %f\n", node_ret->timestamp);
 
 	memcpy(&current_msg, node_ret, sizeof(msg_t));
 	free(node_ret);

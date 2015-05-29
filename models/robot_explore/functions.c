@@ -36,4 +36,3 @@ void map_diff_exchange(agent_state_type *agent_a, agent_state_type *agent_b) {
 		}
 	}
 }
-

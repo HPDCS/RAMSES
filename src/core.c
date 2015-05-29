@@ -343,22 +343,22 @@ bool check_termination(void) {
 void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size) {
 	// DC: environment_interaction -> environment_update
 	queue_insert(region, UINT_MAX, UINT_MAX, NULL, environment_update, time, EXECUTION_EnvironmentUpdate, args, size);
-	printf("INFO: EnvironmentUpdate event queued\n");
+	printf("INFO: EnvironmentUpdate event queued at time %f\n", time);
 }
 
 void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size) {
 	queue_insert(region, agent, UINT_MAX, environment_interaction, NULL, time, EXECUTION_EnvironmentInteraction, args, size);
-	printf("INFO: EnvironmentInteraction event queued\n");
+	printf("INFO: EnvironmentInteraction event queued at time %f\n", time);
 }
 
 void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size) {
 	queue_insert(current_lp, agent_a, agent_b, agent_interaction, NULL, time, EXECUTION_AgentInteraction, args, size);
-	printf("INFO: AgentInteraction event queued\n");
+	printf("INFO: AgentInteraction event queued at time %f\n", time);
 }
 
 void Move(unsigned int agent, unsigned int destination, simtime_t time) {
 	queue_insert(destination, agent, UINT_MAX, NULL, NULL, time, EXECUTION_Move, NULL, 0);
-	printf("INFO: Move event queued\n");
+	printf("INFO: Move event queued at time %f\n", time);
 }
 
 
