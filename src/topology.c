@@ -326,20 +326,24 @@ void UseTopology(unsigned int _topology) {
 unsigned int FindRegion(int topology) {
 
 	unsigned int direction;
+	int target;
 
-	// Basiong on the topology a random direction is chosen
-	switch (topology) {
-		case TOPOLOGY_HEXAGON:
-			direction = RandomRange(0, 5);
-		break;
+	do {
+		// Basiong on the topology a random direction is chosen
+		switch (topology) {
+			case TOPOLOGY_HEXAGON:
+				direction = RandomRange(0, 5);
+			break;
 
-		case TOPOLOGY_SQUARE:
-			direction = RandomRange(0, 3);
-		break;
-	}
+			case TOPOLOGY_SQUARE:
+				direction = RandomRange(0, 3);
+			break;
+		}
 
 	// Retrieve the target region's id
-	return get_target_id(current_lp, direction);
+	} while((target = get_target_id(current_lp, direction)) < 0);
+
+	return target;
 }
 
 

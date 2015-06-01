@@ -255,6 +255,7 @@ static void process_init_event(void) {
 	// array; therefore it coalesces all the states together:
 	// first all the regions, then all the agents
 
+	printf("Set up regions\n");
 	// Sets up REGIONS
 	current_lvt = 0;
 	for(index = 0; index < region_c; index++) {
@@ -267,9 +268,10 @@ static void process_init_event(void) {
 		// Callback function will return the pointer to the initialized region's state
 		states[index] = (*region_initialization)(index);
 
-		queue_deliver_msgs(); 
+//		queue_deliver_msgs(); 
 	}
 
+	printf("Set up agents\n");
 	// Sets up AGENTS
 	for(agent = 0; agent < agent_c; agent++, index++) {
 		printf("Call application initializer callback for agent %d...\n", agent);
@@ -284,7 +286,7 @@ static void process_init_event(void) {
 		// Callback function will return the pointer to the initialized agent's state
 		states[index] = (*agent_initialization)(agent);
 
-		queue_deliver_msgs(); 
+//		queue_deliver_msgs(); 
 	}
 }
 
@@ -386,7 +388,7 @@ void thread_loop(unsigned int thread_id) {
 
 	if(check_safety(current_lvt, &events) == 1) {
 
-		printf("INFO: Event at time %f is safe\n");
+		printf("\033[0;36mINFO: Event at time %f is safe\n\033[0m", current_lvt);
 		call_regular_function(&current_msg);
 
 //	ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
@@ -397,7 +399,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
 	} else {
 
-	printf("INFO: Event at time %f is not safe: running in reversible mode\n", current_msg.timestamp);
+	printf("\033[0;31mINFO: Event at time %f is not safe: running in reversible mode\n\033[0m", current_msg.timestamp);
 	// Create a new revwin to record reverse instructions
 	window = create_new_revwin(0);
 
@@ -435,7 +437,7 @@ void thread_loop(unsigned int thread_id) {
 
  
 //	can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
-	stop = check_termination();
+//	stop = check_termination();
 
 	#ifdef THROTTLING
 	if((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
@@ -465,8 +467,9 @@ void thread_loop(unsigned int thread_id) {
 
 
 void *start_thread(void *args) {
-	//~int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
-	tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
+	printf("Start new thread\n");
+	
+	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
 
 	thread_loop(tid);
 
@@ -483,7 +486,7 @@ void StartSimulation(unsigned short int number_of_threads) {
 		exit(EXIT_FAILURE);
 	}
 
-	printf("INFO: Simulation is starting...\n");
+	printf("INFO: Simulation is starting (%d threads)...\n\n", number_of_threads);
 
 	//Child thread
 	for(i = 0; i < number_of_threads - 1; i++) {
@@ -509,7 +512,7 @@ void StopSimulation() {
 void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f region_init) {
 	unsigned int i;
 
-	printf("INFO: Setting up simulation platform...\n");
+	printf("INFO: Setting up simulation platform with %u agents and %u regions...\n", agentc, regionc);
 
 	if(regionc == 0) {
 		fprintf(stderr, "ERROR: Starting a simulation with no regions. Aborting...\n");
@@ -540,6 +543,7 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 	// provided as callback by the application
 	agent_c = agentc;
 	agent_initialization = agent_init;
+	
 	region_c = regionc;
 	region_initialization = region_init;
 

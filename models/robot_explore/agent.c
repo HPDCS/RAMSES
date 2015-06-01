@@ -17,17 +17,26 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 	unsigned int tentative_cell;
 	double distance_increment;
 
+	printf("a_star invocation with current_cell=%d\n", current_cell);
+
 	*good_direction = UINT_MAX;
 	SET_BIT(state->a_star_map, current_cell);
-	map_linear_to_hexagon(state->target_cell, &x1, &y1);
 
-	for(i = 0; i < CELL_EDGES; i ++) {
+	// Translates the selected target cell into the cartesian coordinates
+	// in order to perform path search
+	map_linear_to_cartesian(state->target_cell, &x1, &y1);
+
+	for(i = 0; i < CELL_EDGES; i++) {
 
 		// Query the simulation engine to retrieve the id of the region
-		// heading in the selected direction
+		// heading in the selected direction.
+		// Note that GetTargetRegion could return -1 in case we tring
+		// to move across a boundary.
 		tentative_cell = GetTargetRegion(current_cell, i);
-		if (tentative_cell < 0) {
+		printf("Agent in cell %u is tring to move towards %s [%u] (cell %d)\n", current_cell, direction_name(i), i,  tentative_cell);
+		if ((signed int)tentative_cell < 0) {
 			// In that direction no region is reachable
+			printf("Cannot move from cell %u in direction %s [%u] (cell %d)\n", current_cell, direction_name(i), i, tentative_cell);
 			continue;
 		}
 
@@ -42,13 +51,13 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 
 			// Is this the target?
 			if(current_cell == state->target_cell) {
-//				printf("TROVATO! current cell %d target %d\n", current_cell, state->target_cell);
+				printf("TROVATO! current cell %d target %d\n", current_cell, state->target_cell);
 				*good_direction = i;
 				return 0.0;
 			}
 
 			// Compute the distance from the target if we make that move
-			map_linear_to_hexagon(tentative_cell, &x2, &y2);
+			map_linear_to_cartesian(tentative_cell, &x2, &y2);
 			dx = x2-x1;
 			dy = y2-y1;
 			
@@ -71,9 +80,13 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 unsigned int compute_direction(agent_state_type *state) {
 	unsigned int good_direction = UINT_MAX;
 
+	printf("Computing a new direction\n");
+
 	bzero(state->a_star_map, BITMAP_SIZE(number_of_regions));
 
 	a_star(state, state->current_cell, &good_direction);
+
+	//printf("Agent in %u is moving towards %s [%u] (cell %d)\n", state->current_cell, direction_name(good_direction), good_direction, GetTargetRegion(state->current_cell, good_direction));
 
 	return good_direction;
 }
@@ -87,7 +100,7 @@ unsigned int closest_frontier(agent_state_type *state, unsigned int exclude) {
 	unsigned int target = -1;
 	unsigned int curr_cell = state->current_cell;
 
-	map_linear_to_hexagon(curr_cell, &curr_x, &curr_y); 
+	map_linear_to_cartesian(curr_cell, &curr_x, &curr_y); 
 
 	for(i = 0; i < number_of_regions; i++) {
 
@@ -98,7 +111,7 @@ unsigned int closest_frontier(agent_state_type *state, unsigned int exclude) {
 				continue;
 			}
 			
-			map_linear_to_hexagon(i, &x, &y);
+			map_linear_to_cartesian(i, &x, &y);
 			// TODO: optimize
 			distance = sqrt((curr_x - x)*(curr_x - x) + (curr_y - y)*(curr_y - y));
 

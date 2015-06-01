@@ -21,9 +21,9 @@
 
 // Movement directions
 #define N 0
-#define E 1
+#define W 1
 #define S 2
-#define W 3
+#define E 3
 
 
 #define MASK 0x00000001LL         // Mask used to check, set and unset bits

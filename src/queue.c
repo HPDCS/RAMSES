@@ -105,7 +105,7 @@ void queue_insert(unsigned int receiver, unsigned int entity1, unsigned int enti
 	abort();
   }
 
-  printf("QUEUE: receiver: %u, entity1: %u, entity2: %u, interaction: %p, update: %p, timestamp: %f, type: %d, content: %p, size: %u\n", receiver, entity1, entity2, interaction, update, timestamp, event_type, event_content, event_size);
+//  printf("QUEUE: receiver: %u, entity1: %u, entity2: %u, interaction: %p, update: %p, timestamp: %f, type: %d, content: %p, size: %u\n", receiver, entity1, entity2, interaction, update, timestamp, event_type, event_content, event_size);
   
   if(timestamp < _thr_pool.min_time)
     _thr_pool.min_time = timestamp;

@@ -10,7 +10,7 @@
 
 // Global variables
 unsigned int number_of_agents = 4;
-unsigned int number_of_regions = 4;
+unsigned int number_of_regions = 1;
 
 // Declaration of the client side callback functions
 void *agent_init(unsigned int id);
@@ -29,6 +29,7 @@ void update_region(unsigned int region_id, simtime_t now, void *args, size_t siz
 void *agent_init(unsigned int id) {
 	agent_state_type *state = NULL;
 	simtime_t start_time;
+	int index;
 
 	printf("APP :: setup agent %d\n", id);
 
@@ -46,7 +47,11 @@ void *agent_init(unsigned int id) {
 		printf("Unable to allocate memory for a new agent\n");
 		exit(1);
 	}
-	bzero(state->visit_map, number_of_regions * sizeof(map_t));
+	for(index = 0; index < number_of_regions; index++) {
+		map_t *map = (state->visit_map + index);
+		map->visited = false;
+		bzero(map->neighbours, sizeof(unsigned int) * CELL_EDGES);
+	}
 	
 	// Initializes visit map
 	state->a_star_map = malloc(number_of_regions * sizeof(map_t));
@@ -159,6 +164,9 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 		printf("Agent %d has been disposed\n", agent_id);
 		return;
 	}
+
+	// Update the location of the agent
+	agent->current_cell = region_id;
 	
 	// Updates robot's knowledge
 	map = &(agent->visit_map[region_id]);
@@ -166,14 +174,17 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 		printf("Visit map is null!\n");
 		return;
 	}
+	printf("cell %d is visited? %s\n", region_id, map->visited ? "TRUE" : "FALSE");
 	if (!map->visited) {
 		// If the region has not yet visited, then mark it and increment the counter
 		map->visited = true;
 		agent->visited_cells++;
 		
 		// Updates the region's neighbours from the robot's perspective
-		memcpy(region->neighbours, map->neighbours, sizeof(unsigned int) * 6);
+		memcpy(region->neighbours, map->neighbours, sizeof(unsigned int) * CELL_EDGES);
 	}
+
+	printf("Visited %d cells over %d\n", agent->visited_cells, number_of_regions);
 	
 	// Checks whether the cell represents robot's final target,
 	// otherwise continue randomly
@@ -221,27 +232,27 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	}
 	
 	// Compute a direction to move towards
-	agent->direction = compute_direction(agent);
+	/*agent->direction = compute_direction(agent);
 	
 	// If computed direction is UINT_MAX, then there is no path to the target.
 	// Just take a random direction
-	if(!is_reachable(agent->current_cell, agent->direction)) {
+	if(agent->direction == UINT_MAX) {
 		do {
 			agent->direction = RandomRange(0, 3);
-		} while(!is_reachable(agent->current_cell, agent->direction));
+		} while(GetTargetRegion(agent->current_cell, agent->direction) < 0);
 	}
-	
+	*/
 	// Get the region's id from the knowledge of current cell and the chosen direction
-	step_cell = get_target_id(agent->current_cell, agent->direction);
+	step_cell = FindRegion(TOPOLOGY_SQUARE);//GetTargetRegion(agent->current_cell, agent->direction);
 	step_time = now + Expent(AGENT_TIME_STEP);
 
-/*	// Check termination
-	if((double)agent->visited_cells / number_of_regions < 1.0) {
-		printf("Robot %d: %.02f percent --- %d meetings so far --- currently in cell %d\n", agent_id - number_of_regions,
-			(double)agent->visited_cells / number_of_regions * 100, agent->met_robots, agent->current_cell);
-			
+	// Check termination
+	if((double)agent->visited_cells / number_of_regions > .95) {
 		StopSimulation();
-	}*/
+		
+		printf("Robot %d: %.02f percent --- %d meetings so far --- currently in cell %d\n", agent_id,
+			(double)agent->visited_cells / number_of_regions * 100, agent->met_robots, agent->current_cell);
+	}
 
 	// Schedule a new intercation event between the agent and the next region
 	EnvironmentInteraction(agent_id, step_cell, step_time, region_interaction, NULL, 0);
@@ -298,10 +309,18 @@ int main(int argc, char** argv) {
 	// TODO: gestire dinamicamente il numero di threads
 	unsigned int number_of_threads = 1;
 
+	if (argc > 1) {
+		number_of_threads = atoi(argv[1]);
+		number_of_agents = atoi(argv[2]);
+		number_of_regions = atoi(argv[3]);
+	}
+
 	printf("APP :: main\n");
 
 	// Setup the topology
 	UseTopology(TOPOLOGY_SQUARE);
+
+	print_topology_map();
 
 	// Setup of the simulation model
 	Setup(number_of_agents, agent_init, number_of_regions, region_init);

@@ -39,7 +39,7 @@ void execution_time(simtime_t time) {
 	// Gets the lock on the region
 	region = current_msg.receiver_id;
 
-	printf("INFO: Event with time %f tring to acquired lock on region %d\n", time, region);
+	printf("[%u] INFO: Event with time %f tring to acquired lock on region %d\n", tid, time, region);
 
 	if(__sync_lock_test_and_set(&region_lock[region], 1) == 1) {
 		// If the thread cannot acquire the lock, this means that another
@@ -51,7 +51,7 @@ void execution_time(simtime_t time) {
 			waiting_time = waiting_time_vector[region];
 			retry = false;
 			
-			printf("INFO: Event %f is waiting for region %d\n", time, region);
+			printf("[%u] INFO: Event %f is waiting for region %d\n", tid, time, region);
 
 			if(waiting_time < time) {
 
@@ -71,14 +71,14 @@ void execution_time(simtime_t time) {
 		}
 	}
 
-	printf("INFO: Lock on region %d acquired by event %f\n", region, time);
+	printf("[%u] INFO: Lock on region %d acquired by event %f\n", tid, region, time);
 	
 	current_time_vector[tid] = time;
 	outgoing_time_vector[tid] = INFTY;
 
 	__sync_lock_release(&region_lock[region]);
 
-	printf("INFO: Lock on region %d released by event %f\n", region, time);
+	printf("[%u] INFO: Lock on region %d released by event %f\n", tid, region, time);
 //  if(input_tid != tid && outgoing_time_vector[input_tid] == time)
 //    outgoing_time_vector[input_tid] = INFTY;
 }
