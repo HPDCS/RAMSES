@@ -174,7 +174,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 		printf("Visit map is null!\n");
 		return;
 	}
-	printf("cell %d is visited? %s\n", region_id, map->visited ? "TRUE" : "FALSE");
+//	printf("cell %d is visited? %s\n", region_id, map->visited ? "TRUE" : "FALSE");
 	if (!map->visited) {
 		// If the region has not yet visited, then mark it and increment the counter
 		map->visited = true;
@@ -184,7 +184,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 		memcpy(region->neighbours, map->neighbours, sizeof(unsigned int) * CELL_EDGES);
 	}
 
-	printf("Visited %d cells over %d\n", agent->visited_cells, number_of_regions);
+//	printf("Visited %d cells over %d\n", agent->visited_cells, number_of_regions);
 	
 	// Checks whether the cell represents robot's final target,
 	// otherwise continue randomly
@@ -252,6 +252,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 		
 		printf("Robot %d: %.02f percent --- %d meetings so far --- currently in cell %d\n", agent_id,
 			(double)agent->visited_cells / number_of_regions * 100, agent->met_robots, agent->current_cell);
+		return;
 	}
 
 	// Schedule a new intercation event between the agent and the next region

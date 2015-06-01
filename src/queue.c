@@ -204,7 +204,7 @@ int queue_min(void) {
 
 	__sync_lock_release(&queue_lock);
 
-	printf("INFO: Get event with time %f\n", current_msg.timestamp);
+	log_info(NC, "Get event with time %f\n", current_msg.timestamp);
 
 	execution_time(current_msg.timestamp);
 

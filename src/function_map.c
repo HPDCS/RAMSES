@@ -35,7 +35,7 @@ void initialize_map(int argc, char **argv, char **envp) {
 	printf("My program name is %s\n", prog_name);
 
 	// Get the number of functions to initialize the vector
-	snprintf(buff, 1024, "readelf -a %s | grep FUNC | grep -v UND | grep \"_reverse\" | wc -l > dump", prog_name);
+	snprintf(buff, 1024, "readelf -Wa %s | grep FUNC | grep -v UND | grep \"_reverse$\" | wc -l > dump", prog_name);
 	system(buff);
 	
 	// read file and set num_functions
@@ -49,7 +49,7 @@ void initialize_map(int argc, char **argv, char **envp) {
 	bzero(function_map, sizeof(fmap) * num_functions);
 	
 	// Get the number of functions to initialize the vector
-	snprintf(buff, 1024, "readelf -a %s | grep FUNC | grep -v UND | grep \"_reverse\" > dump", prog_name);
+	snprintf(buff, 1024, "readelf -Wa %s | grep FUNC | grep -v UND | grep \"_reverse$\" > dump", prog_name);
 	system(buff);
 	
 	// Get the addresses of reverse functions
@@ -144,6 +144,8 @@ void call_instrumented_function(msg_t *m) {
 		exit(EXIT_FAILURE);
 	}
 
+	log_info(NC, "Finding function at address '%#08llx'\n", function);
+
 	// Find the instrumented function
 	for(i = 0; i < num_functions; i++) {
 		if(function_map[i].original_address == function) {
@@ -151,6 +153,8 @@ void call_instrumented_function(msg_t *m) {
 			goto do_call;
 		}
 	}
+
+	printf("Function at address '%#08llx' does not found!!\n", function);
 
 	fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
         exit(EXIT_FAILURE);

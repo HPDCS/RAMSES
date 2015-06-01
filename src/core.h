@@ -25,18 +25,32 @@
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
 
+#define GREEN "\033[0;32m"
+#define RED "\033[0;31m"
+#define CYAN "\033[0;36m"
+#define YELLOW "\033[0;33m"
+#define NC "\033[0m"
+#define log_info(color, ...) do {\
+	printf(color);\
+	printf("[%u] INFO: ", tid);\
+	printf(__VA_ARGS__);\
+	printf("\033[0m");\
+	fflush(stdout);\
+	} while(0);
+//#define log_info(...) log_cinfo(NC,__VA_ARGS__) 
+
+
 typedef struct __msg_t {  
-  unsigned int sender_id;
-  unsigned int receiver_id;
-  simtime_t timestamp;
-  int type;
-  int entity1;
-  int entity2;
-  interaction_f interaction;
-  update_f update;
-  unsigned int data_size;  
-  unsigned char data[MAX_DATA_SIZE];
-  
+	unsigned int sender_id;
+	unsigned int receiver_id;
+	simtime_t timestamp;
+	int type;
+	int entity1;
+	int entity2;
+	interaction_f interaction;
+	update_f update;
+	unsigned int data_size;  
+	unsigned char data[MAX_DATA_SIZE];
 } msg_t;
 
 

@@ -57,7 +57,7 @@ static init_f agent_initialization;
 static init_f region_initialization;
 
 //unsigned int *lock_vector;			/// Tells whether one region has been locked by some thread
-unsigned int *waiting;		/// Maintains the successor thread waiting for that region
+//unsigned int *waiting;		/// Maintains the successor thread waiting for that region
 //unsigned int *owner_vector;			/// Keeps track of the current owner of the region
 
 unsigned int agent_c = 0;
@@ -388,10 +388,11 @@ void thread_loop(unsigned int thread_id) {
 
 	if(check_safety(current_lvt, &events) == 1) {
 
-		printf("\033[0;36mINFO: Event at time %f is safe\n\033[0m", current_lvt);
+		log_info(CYAN, "Event at time %f is safe\n", current_lvt);
+
 		call_regular_function(&current_msg);
 
-//	ProcessEvent(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
+		log_info(NC, "Event at time %f has been processed\n", current_lvt);
 
 	
 #ifdef FINE_GRAIN_DEBUG
@@ -399,12 +400,11 @@ void thread_loop(unsigned int thread_id) {
 #endif
 	} else {
 
-	printf("\033[0;31mINFO: Event at time %f is not safe: running in reversible mode\n\033[0m", current_msg.timestamp);
+	log_info(RED, "Event at time %f is not safe: running in reversible mode\n", current_msg.timestamp);
 	// Create a new revwin to record reverse instructions
 	window = create_new_revwin(0);
 
 	call_instrumented_function(&current_msg);
-//		ProcessEvent_reverse(current_lp, current_lvt, current_msg.type, current_msg.data, current_msg.data_size, states[current_lp]);
 
 	#ifdef THROTTLING
 		throttling(events);
@@ -413,11 +413,12 @@ void thread_loop(unsigned int thread_id) {
 	// Tries to commit actual event until thread finds out that
 	// someone else is waiting for the same region (current_lp)
 	// with a less timestamp. If this is the case, it does a rollback.
+	log_info(NC, "Event %f waits for commit\n", current_msg.timestamp);
 	while(1) {
 		// If some other thread is wating with a less event's timestp,
 		// then run a rollback and exit
 		if(check_waiting() == 1) {
-			printf("INFO: event at time %f must be undone: revesing...\n", current_msg.timestamp);
+			log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_msg.timestamp);
 			execute_undo_event(window);
 			break;
 		}
@@ -425,15 +426,18 @@ void thread_loop(unsigned int thread_id) {
 		// If the event is not yet safe continue to retry it safety
 		// hopoing that commit horizion eventually will progress
 		if(check_safety(current_lvt, &events) == 1) {
-			printf("INFO: Event at time %f has became safe: flushing...\n", current_msg.timestamp);
-			flush();
+			log_info(GREEN, "Event at time %f has became safe: flushing...\n", current_msg.timestamp);
 			break;
 		}
 	}
- 
+
 		// Free current revwin
 		free_revwin(window);
+		
+		log_info(NC, "Reverse window has been released\n");
 	}
+
+	flush();
 
  
 //	can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
@@ -467,8 +471,6 @@ void thread_loop(unsigned int thread_id) {
 
 
 void *start_thread(void *args) {
-	printf("Start new thread\n");
-	
 	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
 
 	thread_loop(tid);
@@ -488,6 +490,9 @@ void StartSimulation(unsigned short int number_of_threads) {
 
 	printf("INFO: Simulation is starting (%d threads)...\n\n", number_of_threads);
 
+	n_cores = number_of_threads;
+	init();
+
 	//Child thread
 	for(i = 0; i < number_of_threads - 1; i++) {
 		if((ret = pthread_create(&tid[i], NULL, start_thread, NULL)) != 0) {
@@ -501,6 +506,8 @@ void StartSimulation(unsigned short int number_of_threads) {
 
 	for(i = 0; i < number_of_threads - 1; i++)
 		pthread_join(tid[i], NULL);
+
+	printf("Simulation finished\n");
 }
 
 
@@ -546,8 +553,6 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 	
 	region_c = regionc;
 	region_initialization = region_init;
-
-	init();
 
 	// Check whether agents' position has been properly initialized by InitialPosition invocation
 	for(i = 0; i < agent_c; i++) {
