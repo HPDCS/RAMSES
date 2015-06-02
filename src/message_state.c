@@ -72,7 +72,7 @@ void execution_time(simtime_t time) {
 		
 		// Spins over the region_lock until the current event time is grater
 		// than the waiting one
-		while(time > waiting_time) {
+		while(time >= waiting_time) {
 			while(__sync_lock_test_and_set(&region_lock[region], 1) == 1);
 		}
 	}
@@ -118,7 +118,7 @@ int check_safety(simtime_t time, unsigned int *events) {
 			*events++;
 		}
 	}
-//	log_info(YELLOW, "Checking safety for time %f, min is %f hold by thread %d\n", time, min == INFTY ? -1 : min, min_tid);
+	log_info(YELLOW, "Checking safety for time %f, min is %f hold by thread %d\n", time, min == INFTY ? -1 : min, min_tid);
 
 	if(current_time_vector[tid] < min) {
 		ret = 1;
@@ -138,6 +138,7 @@ int check_safety(simtime_t time, unsigned int *events) {
 
 bool check_waiting(simtime_t time) {
 	// Check for thread with less event's timestamp
+//	log_info(PURPLE, "Event %f is checking if someone else has priority on region %d (%f)\n", time, current_lp, waiting_time_vector[current_lp] == INFTY ? -1 : waiting_time_vector[current_lp]);
 	return (waiting_time_vector[current_lp] < time);
 }
 
@@ -156,9 +157,11 @@ void flush(void) {
 	region = current_msg.receiver_id;
 	time = current_msg.timestamp;
 
-	current_time_vector[tid] = INFTY;
 	outgoing_time_vector[tid] = t_min;
+	current_time_vector[tid] = INFTY;
 	waiting_time_vector[region] = INFTY;
+
+	log_info(NC, "Vector status: outgoing=%f", t_min);
 
 	log_info(NC, "Lock on region %d released by event %f\n", region, time);
 

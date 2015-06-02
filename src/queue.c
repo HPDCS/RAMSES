@@ -123,8 +123,6 @@ void queue_insert(unsigned int receiver, unsigned int entity1, unsigned int enti
   msg_ptr->update = update;
 
   memcpy(msg_ptr->data, event_content, event_size);
-
-  queue_deliver_msgs();		// TODO: [DC] giusto aggiungerla qui?
 }
 
 double queue_pre_min(void)

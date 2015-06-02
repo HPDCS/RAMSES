@@ -276,7 +276,7 @@ static void process_init_event(void) {
 		// Callback function will return the pointer to the initialized region's state
 		states[index] = (*region_initialization)(index);
 
-//		queue_deliver_msgs(); 
+		queue_deliver_msgs(); 
 	}
 
 	printf("Set up agents\n");
@@ -294,7 +294,7 @@ static void process_init_event(void) {
 		// Callback function will return the pointer to the initialized agent's state
 		states[index] = (*agent_initialization)(agent);
 
-//		queue_deliver_msgs(); 
+		queue_deliver_msgs(); 
 	}
 }
 
@@ -438,10 +438,10 @@ void thread_loop(unsigned int thread_id) {
 	// Create a new revwin to record reverse instructions
 	window = create_new_revwin(0);
 	if(type == EXECUTION_Move) {
-			current = agent_position[current_msg.receiver_id];
-			move(current_msg.entity1, current_msg.receiver_id);
-		} else
-			call_instrumented_function(&current_msg);
+		current = agent_position[current_msg.receiver_id];
+		move(current_msg.entity1, current_msg.receiver_id);
+	} else
+		call_instrumented_function(&current_msg);
 
 	#ifdef THROTTLING
 		throttling(events);
@@ -456,14 +456,17 @@ void thread_loop(unsigned int thread_id) {
 		// then run a rollback and exit
 		if(check_waiting() == 1) {
 			log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_msg.timestamp);
+
+			rollbacks++;
 			if(current_msg.type == EXECUTION_Move) {
 				// If the event is a move, than it can be handled entirely here
 				printf("ATTENZIONE IL ROLLBACK DELLA MOVE VA IMPLEMENTATO!\n");
 				move(current_msg.entity1, current);
 				break;
 			}
-			rollbacks++;
+
 			execute_undo_event(window);
+
 			break;
 		}
 
@@ -501,7 +504,7 @@ void thread_loop(unsigned int thread_id) {
 	//printf("Timestamp %f executed\n", evt.timestamp);
 	}
 
-	printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
+	//printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
 
 #ifdef FINE_GRAIN_DEBUG
 
@@ -518,6 +521,8 @@ void *start_thread(void *args) {
 	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
 
 	thread_loop(tid);
+
+	printf("Thread %d exited\n", tid);
 
 	pthread_exit(NULL);
 }
@@ -551,8 +556,9 @@ void StartSimulation(unsigned short int number_of_threads) {
 	//Main thread
 	thread_loop(0);
 
-	for(i = 0; i < number_of_threads - 1; i++)
+	for(i = 0; i < number_of_threads - 1; i++) {
 		pthread_join(tid[i], NULL);
+	}
 
 	printf("======================================\n");
 	printf("Simulation finished\n");
@@ -564,6 +570,8 @@ void StartSimulation(unsigned short int number_of_threads) {
 
 void StopSimulation() {
 	stop = true;
+
+	printf("INFO: Request to STOP Simulation\n");
 
 	timer_start(simulation_stop);
 }

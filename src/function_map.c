@@ -126,8 +126,8 @@ static void call_it(void *f, msg_t *m) {
 			break;
 
 		default:
-			fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
-	                exit(EXIT_FAILURE);
+			fprintf(stderr, "%s:%d: Runtime error: unkownw event type %d\n", __FILE__, __LINE__, m->type);
+			exit(EXIT_FAILURE);
 	}
 }
 
@@ -159,9 +159,9 @@ void call_instrumented_function(msg_t *m) {
 	printf("Function at address '%#08llx' does not found!!\n", function);
 
 	fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
-        exit(EXIT_FAILURE);
+	exit(EXIT_FAILURE);
 	
-   do_call:
+	do_call:
 	call_it(function, m);
 }
 

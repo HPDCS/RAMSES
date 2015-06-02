@@ -29,6 +29,7 @@
 #define RED "\033[0;31m"
 #define CYAN "\033[0;36m"
 #define YELLOW "\033[0;33m"
+#define PURPLE "\033[0;35m"
 #define NC "\033[0m"
 #define log_info(color, ...) do {\
 	printf(color);\
