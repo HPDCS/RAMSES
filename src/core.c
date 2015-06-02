@@ -42,6 +42,13 @@
 #define DELTA 500  // tick count
 #define HIGHEST_COUNT	5
 
+// Statistics
+static timer simulation_time;
+static unsigned int rollbacks;
+static unsigned int safe;
+static unsigned int unsafe;
+
+
 __thread int delta_count = 0;
 __thread double abort_percent = 1.0;
 
@@ -192,11 +199,11 @@ void *GetAgentState(unsigned int agent) {
 	return states[region_c + agent];
 }
 
-
 int GetNeighbours(unsigned int **neighbours) {
 	unsigned int region_id;
 	unsigned int agent_id;
 	unsigned int count;
+	int index;
 
 	// Both regions and agents states are coalesced in a single linear
 	// list held by 'states'. It first contains regions, then agents
@@ -205,10 +212,7 @@ int GetNeighbours(unsigned int **neighbours) {
 	// to scan the whole list looking for the position that each agent has.
 
 	// Gets current agent's position
-	region_id = agent_position[current_lp];
-	if (region_id > region_c) {
-		rootsim_error(true, "Met impossible condition for agent's position\n");
-	}
+	region_id = current_lp;
 
 	// Counts the other agent that are present in the same region
 	count = 0;
@@ -223,11 +227,12 @@ int GetNeighbours(unsigned int **neighbours) {
 	*neighbours = malloc(sizeof(unsigned int) * count);
 
 	// Looks for all agents by scanning the list to fetch the exact id of each neighbour
+	index = 0;
 	for (agent_id = 0; agent_id < agent_c; agent_id++) {
-		if (agent_position[agent_id] == region_id) {
+		if (presence_matrix[region_id][agent_id]) {
 			// Current agent is actually in the same region,
 			// therefore it will be added to the result list
-			*(neighbours)[agent_id] = agent_id;
+			(*neighbours)[index++] = agent_id;
 		}
 	}
 
@@ -243,7 +248,6 @@ void InitialPosition(unsigned int region) {
 	// being initialized dureing the setup phase.
 	agent_position[current_lp] = region;
 	presence_matrix[region][current_lp] = true;
-	return;
 }
 
 
@@ -365,20 +369,28 @@ void Move(unsigned int agent, unsigned int destination, simtime_t time) {
 	printf("INFO: Move event queued at time %f\n", time);
 }
 
-void move(unsigned int agent, unsigned int destination) {
+static void move(unsigned int agent, unsigned int destination) {
 	// TODO: !!! in caso di rollback non funziona nulla !!!
 	unsigned int source;
 
+	/*if (agent < 0 || agent > agent_c)
+		rootsim_error(true, "Agent %d does not exists\n", agent);
+
+	if (destination < 0 || destination > region_c)
+		rootsim_error(true, "Region %d does not exists\n", destination);
+*/
 	source = agent_position[agent];
 	agent_position[agent] = destination;
 	presence_matrix[destination][agent] = true;
 	presence_matrix[source][agent] = false;
+
+	log_info(NC, "Agent %d moved from %d to %d\n", agent, source, destination);
 }
 
 
 // Main loop
 void thread_loop(unsigned int thread_id) {
- // int status;
+	int type;
 	unsigned int events;
 	revwin *window;
   
@@ -393,16 +405,22 @@ void thread_loop(unsigned int thread_id) {
 	if(queue_min() == 0) {
 	  continue;
 	}
-	
 
 	current_lp = current_msg.receiver_id;
 	current_lvt  = current_msg.timestamp;
+	type = current_msg.type;
+
+	unsigned int current;
 
 	if(check_safety(current_lvt, &events) == 1) {
 
 		log_info(CYAN, "Event at time %f is safe\n", current_lvt);
 
-		call_regular_function(&current_msg);
+		if(type == EXECUTION_Move) {
+			current = agent_position[current_msg.receiver_id];
+			move(current_msg.entity1, current_msg.receiver_id);
+		} else
+			call_regular_function(&current_msg);
 
 		log_info(NC, "Event at time %f has been processed\n", current_lvt);
 
@@ -415,8 +433,11 @@ void thread_loop(unsigned int thread_id) {
 	log_info(RED, "Event at time %f is not safe: running in reversible mode\n", current_msg.timestamp);
 	// Create a new revwin to record reverse instructions
 	window = create_new_revwin(0);
-
-	call_instrumented_function(&current_msg);
+	if(type == EXECUTION_Move) {
+			current = agent_position[current_msg.receiver_id];
+			move(current_msg.entity1, current_msg.receiver_id);
+		} else
+			call_instrumented_function(&current_msg);
 
 	#ifdef THROTTLING
 		throttling(events);
@@ -434,7 +455,7 @@ void thread_loop(unsigned int thread_id) {
 			if(current_msg.type == EXECUTION_Move) {
 				// If the event is a move, than it can be handled entirely here
 				printf("ATTENZIONE IL ROLLBACK DELLA MOVE VA IMPLEMENTATO!\n");
-				move(0, 0);
+				move(current_msg.entity1, current);
 				break;
 			}
 			execute_undo_event(window);
@@ -535,7 +556,7 @@ void StopSimulation() {
 
 
 void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f region_init) {
-	unsigned int i;
+	unsigned int i, j;
 
 	printf("INFO: Setting up simulation platform with %u agents and %u regions...\n", agentc, regionc);
 
@@ -559,7 +580,10 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 	presence_matrix = malloc(sizeof(bool *) * regionc);
 	for(i = 0; i < regionc; i++) {
 		presence_matrix[i] = malloc(sizeof(bool) * agentc);
-		bzero(presence_matrix[i], sizeof(bool) * agentc);
+		for(j = 0; j < agent_c; j++) {
+			//bzero(presence_matrix[i], sizeof(bool) * agentc);
+			presence_matrix[i][j] = false;
+		}
 	}
 
 	printf("INFO: Setting up regions and agents...\n");

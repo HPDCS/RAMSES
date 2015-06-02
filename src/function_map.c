@@ -122,7 +122,7 @@ static void call_it(void *f, msg_t *m) {
 		case EXECUTION_Move:
 			// Manca la callback!
 			//(*interaction)(m->entity1, m->entity2, m->timestamp);
-			move(m->entity1, m->entity2);
+			//move(m->entity1, m->entity2);
 			break;
 
 		default:
@@ -142,6 +142,7 @@ void call_instrumented_function(msg_t *m) {
 		function = m->update;
 	} else {
 		fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
+		printf("Event type = %d\n", m->type);
 		exit(EXIT_FAILURE);
 	}
 
@@ -173,6 +174,7 @@ void call_regular_function(msg_t *m) {
                 function = m->update;
         } else {
                 fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
+                printf("Unable to find function at address %#08llx\n", function);
                 exit(EXIT_FAILURE);
         }
 

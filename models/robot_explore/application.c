@@ -198,14 +198,16 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	// Checks whether there is any other robot in the same region
 	// Retrieve the list of mates' ids
 	number_of_mates = GetNeighbours(&mates);
-	if (number_of_mates > 0) {
+	if (number_of_mates > 1) {
 		// There are other robot here other than me
+		
+//		printf("APP :: found %d mates in region %d\n", number_of_mates, region_id);
 		
 		// I'm going to exchange map's information with each mate
 		// i've found in the current region
 		for (index = 0; index < number_of_mates; index ++) {
 			// TODO: schedulare un evento AgentInteraction invece che gestirlo direttamente qui?
-		
+
 			mate = GetAgentState(mates[index]);
 			
 			// Computes and exchanges map's diff, at the same time
@@ -248,6 +250,9 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	// Get the region's id from the knowledge of current cell and the chosen direction
 	step_cell = FindRegion(TOPOLOGY_SQUARE);//GetTargetRegion(agent->current_cell, agent->direction);
 	step_time = now + Expent(AGENT_TIME_STEP);
+
+	if(step_cell < 0)
+		printf("APP :: target region cannot be found\n", step_cell);
 
 	// Check termination
 	if((double)agent->visited_cells / number_of_regions > .95) {
