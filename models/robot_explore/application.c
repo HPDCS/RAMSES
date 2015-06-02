@@ -8,6 +8,8 @@
 #include "agent.h"
 #include "region.h"
 
+#define printf(...) {}
+
 // Global variables
 unsigned int number_of_agents = 1;
 unsigned int number_of_regions = 1;

@@ -31,14 +31,14 @@
 #define YELLOW "\033[0;33m"
 #define PURPLE "\033[0;35m"
 #define NC "\033[0m"
-#define log_info(color, ...) do {\
+/*#define log_info(color, ...) do {\
 	printf(color);\
 	printf("[%u] INFO: ", tid);\
 	printf(__VA_ARGS__);\
 	printf("\033[0m");\
 	fflush(stdout);\
-	} while(0);
-//#define log_info(...) log_cinfo(NC,__VA_ARGS__) 
+	} while(0);*/
+#define log_info(color, ...) {}
 
 
 typedef struct __msg_t {  

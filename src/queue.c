@@ -183,13 +183,9 @@ int queue_min(void) {
 	//event_pool_node *node_ret;
 	msg_t *node_ret;
 
-//	printf("INFO: Thread %d tring to acquire queue lock\n", tid);
-
 	// Gets the minimum timestamp event from the queue
 	while(__sync_lock_test_and_set(&queue_lock, 1))
 		while(queue_lock);
-
-//	printf("INFO: Thread %d has acquired queue lock\n", tid);
 
 	node_ret = calqueue_get();
 	if(node_ret == NULL) {
@@ -206,7 +202,7 @@ int queue_min(void) {
 
 	execution_time(current_msg.timestamp);
 
-	//__sync_lock_release(&queue_lock);
+//	__sync_lock_release(&queue_lock);
 
 	return 1;
   

@@ -45,9 +45,10 @@
 // Statistics
 static timer simulation_start;
 static timer simulation_stop;
-static unsigned int rollbacks;
-static unsigned int safe;
-static unsigned int unsafe;
+static unsigned int rollbacks = 0;
+static unsigned int safe = 0;
+static unsigned int unsafe = 0;
+static __thread unsigned int events = 0;
 
 
 __thread int delta_count = 0;
@@ -352,22 +353,22 @@ bool check_termination(void) {
 // API implementation
 void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size) {
 	queue_insert(region, UINT_MAX, UINT_MAX, NULL, environment_update, time, EXECUTION_EnvironmentUpdate, args, size);
-	printf("INFO: EnvironmentUpdate event queued at time %f\n", time);
+	//printf("INFO: EnvironmentUpdate event queued at time %f\n", time);
 }
 
 void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size) {
 	queue_insert(region, agent, UINT_MAX, environment_interaction, NULL, time, EXECUTION_EnvironmentInteraction, args, size);
-	printf("INFO: EnvironmentInteraction event queued at time %f\n", time);
+	//printf("INFO: EnvironmentInteraction event queued at time %f\n", time);
 }
 
 void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size) {
 	queue_insert(current_lp, agent_a, agent_b, agent_interaction, NULL, time, EXECUTION_AgentInteraction, args, size);
-	printf("INFO: AgentInteraction event queued at time %f\n", time);
+	//printf("INFO: AgentInteraction event queued at time %f\n", time);
 }
 
 void Move(unsigned int agent, unsigned int destination, simtime_t time) {
 	queue_insert(destination, agent, UINT_MAX, NULL, NULL, time, EXECUTION_Move, NULL, 0);
-	printf("INFO: Move event queued at time %f\n", time);
+	//printf("INFO: Move event queued at time %f\n", time);
 }
 
 static void move(unsigned int agent, unsigned int destination) {
@@ -400,6 +401,7 @@ void thread_loop(unsigned int thread_id) {
 #endif
   
 	tid = thread_id;
+	events = 0;
   
 	while(!stop && !sim_error) {
 
@@ -486,6 +488,11 @@ void thread_loop(unsigned int thread_id) {
 
 	flush();
 
+	events++;
+	if((events % 1000) == 0) {
+		printf("SIM: Thread %d has processed %d events\n", tid, events);
+	}
+
  
 	//	can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
 	//	stop = check_termination();
@@ -526,7 +533,7 @@ void *start_thread(void *args) {
 
 	thread_loop(tid);
 
-	printf("Thread %d exited\n", tid);
+	printf("Thread %d has processed %d events\n", tid, events);
 
 	pthread_exit(NULL);
 }

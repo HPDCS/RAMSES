@@ -41,7 +41,7 @@ void execution_time(simtime_t time) {
 	// Gets the lock on the region
 	region = current_msg.receiver_id;
 
-	printf("[%u] INFO: Event with time %f tring to acquired lock on region %d\n", tid, time, region);
+	log_info(NC, "Event with time %f tring to acquired lock on region %d\n", time, region);
 
 	if(__sync_lock_test_and_set(&region_lock[region], 1) == 1) {
 		// If the thread cannot acquire the lock, this means that another
@@ -53,7 +53,7 @@ void execution_time(simtime_t time) {
 			waiting_time = waiting_time_vector[region];
 			retry = false;
 			
-			printf("[%u] INFO: Event %f is waiting for region %d (waiting min time is %f)\n", tid, time, region, waiting_time == INFTY ? -1 : waiting_time);
+			log_info(NC, "Event %f is waiting for region %d (waiting min time is %f)\n", time, region, waiting_time == INFTY ? -1 : waiting_time);
 
 			if(time < waiting_time) {
 				retry = true;
@@ -61,7 +61,7 @@ void execution_time(simtime_t time) {
 				// Register the current event's timestamp in the waiting queue via CAS
 				simtime_t tmp;
 				if((tmp=__sync_val_compare_and_swap(UNION_CAST(&waiting_time_vector[region], long long *), waiting_time, time)) != time) {
-					printf("[%u] INFO: Event %f has been registered for region %d\n", tid, time, region);
+					log_info(NC, "Event %f has been registered for region %d\n", time, region);
 					break;
 				}
 				log_info(NC, "TMP = %f\n", tmp);
@@ -73,11 +73,11 @@ void execution_time(simtime_t time) {
 		// Spins over the region_lock until the current event time is grater
 		// than the waiting one
 		while(time >= waiting_time) {
-			while(__sync_lock_test_and_set(&region_lock[region], 1) == 1);
+			while(__sync_lock_test_and_set(&region_lock[region], 1) == 1) while(region_lock[region]);
 		}
 	}
 
-	printf("[%u] INFO: Lock on region %d acquired by event %f\n", tid, region, time);
+	log_info(NC, "Lock on region %d acquired by event %f\n", region, time);
 	
 	current_time_vector[tid] = time;
 	outgoing_time_vector[tid] = INFTY;
@@ -118,7 +118,7 @@ int check_safety(simtime_t time, unsigned int *events) {
 			*events++;
 		}
 	}
-//	log_info(YELLOW, "Checking safety for time %f, min is %f hold by thread %d\n", time, min == INFTY ? -1 : min, min_tid);
+	log_info(YELLOW, "Checking safety for time %f, min is %f hold by thread %d\n", time, min == INFTY ? -1 : min, min_tid);
 
 	if(current_time_vector[tid] < min) {
 		ret = 1;
