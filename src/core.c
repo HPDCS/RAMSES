@@ -487,22 +487,26 @@ void thread_loop(unsigned int thread_id) {
 	flush();
 
  
-//	can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
-//	stop = check_termination();
+	//	can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
+	//	stop = check_termination();
 
-	#ifdef THROTTLING
-	if((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
-		hill_climbing();
-	#endif
+		#ifdef THROTTLING
+		if((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
+			hill_climbing();
+		#endif
 
-	if(tid == _MAIN_PROCESS) {
-		evt_count++;
-	if((evt_count - 10000 * (evt_count / 10000)) == 0)
-		printf("TIME: %f\n", current_lvt);
+		if(tid == _MAIN_PROCESS) {
+			evt_count++;
+		if((evt_count - 10000 * (evt_count / 10000)) == 0)
+			printf("TIME: %f\n", current_lvt);
+		}
+			
+		//printf("Timestamp %f executed\n", evt.timestamp);
 	}
-		
-	//printf("Timestamp %f executed\n", evt.timestamp);
-	}
+
+	// This thread is exiting, therefore it has to come out
+	// from the safety check otherwise it generate a starvation
+	min_output_time(INFTY);
 
 	//printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
 

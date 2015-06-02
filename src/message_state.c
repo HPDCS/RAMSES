@@ -118,7 +118,7 @@ int check_safety(simtime_t time, unsigned int *events) {
 			*events++;
 		}
 	}
-	log_info(YELLOW, "Checking safety for time %f, min is %f hold by thread %d\n", time, min == INFTY ? -1 : min, min_tid);
+//	log_info(YELLOW, "Checking safety for time %f, min is %f hold by thread %d\n", time, min == INFTY ? -1 : min, min_tid);
 
 	if(current_time_vector[tid] < min) {
 		ret = 1;
@@ -157,16 +157,16 @@ void flush(void) {
 	region = current_msg.receiver_id;
 	time = current_msg.timestamp;
 
-	outgoing_time_vector[tid] = t_min;
+	outgoing_time_vector[tid] = time;
 	current_time_vector[tid] = INFTY;
 	waiting_time_vector[region] = INFTY;
 
-	log_info(NC, "Vector status: outgoing=%f", t_min);
+	log_info(NC, "Vector status: outgoing=%f\n", t_min);
 
 	log_info(NC, "Lock on region %d released by event %f\n", region, time);
 
 	__sync_lock_release(&queue_lock);
-	__sync_lock_release(&region_lock[current_msg.receiver_id]);
+	__sync_lock_release(&region_lock[region]);
 }
 
 
