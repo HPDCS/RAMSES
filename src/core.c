@@ -43,7 +43,8 @@
 #define HIGHEST_COUNT	5
 
 // Statistics
-static timer simulation_time;
+static timer simulation_start;
+static timer simulation_stop;
 static unsigned int rollbacks;
 static unsigned int safe;
 static unsigned int unsafe;
@@ -414,6 +415,7 @@ void thread_loop(unsigned int thread_id) {
 
 	if(check_safety(current_lvt, &events) == 1) {
 
+		safe++;
 		log_info(CYAN, "Event at time %f is safe\n", current_lvt);
 
 		if(type == EXECUTION_Move) {
@@ -430,6 +432,8 @@ void thread_loop(unsigned int thread_id) {
 #endif
 	} else {
 
+	unsafe++;
+	
 	log_info(RED, "Event at time %f is not safe: running in reversible mode\n", current_msg.timestamp);
 	// Create a new revwin to record reverse instructions
 	window = create_new_revwin(0);
@@ -458,6 +462,7 @@ void thread_loop(unsigned int thread_id) {
 				move(current_msg.entity1, current);
 				break;
 			}
+			rollbacks++;
 			execute_undo_event(window);
 			break;
 		}
@@ -532,6 +537,9 @@ void StartSimulation(unsigned short int number_of_threads) {
 	n_cores = number_of_threads;
 	init();
 
+	// Start timer
+	timer_start(simulation_start);
+
 	//Child thread
 	for(i = 0; i < number_of_threads - 1; i++) {
 		if((ret = pthread_create(&tid[i], NULL, start_thread, NULL)) != 0) {
@@ -546,12 +554,18 @@ void StartSimulation(unsigned short int number_of_threads) {
 	for(i = 0; i < number_of_threads - 1; i++)
 		pthread_join(tid[i], NULL);
 
+	printf("======================================\n");
 	printf("Simulation finished\n");
+	printf("Overall time elapsed: %d msec\n", timer_diff_micro(simulation_start, simulation_stop) / 1000);
+	printf("%d Safe events\n%d Unsafe event\n%d Rolled back events\n", safe, unsafe, rollbacks);
+	printf("======================================\n");
 }
 
 
 void StopSimulation() {
 	stop = true;
+
+	timer_start(simulation_stop);
 }
 
 

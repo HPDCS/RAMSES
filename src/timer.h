@@ -33,6 +33,8 @@ typedef struct timeval timer;
 					__rs_timedif;\
 				})
 
+#define timer_diff_micro(start, stop) (((stop).tv_sec * 1000000 + (stop).tv_usec) - ((start).tv_sec * 1000000 + (start).tv_usec))
+
 /// string must be a char array of at least 64 bytes to keep the whole string
 #define timer_tostring(timer_name, string) do {\
 					time_t __nowtime;\
