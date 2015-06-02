@@ -102,6 +102,7 @@ void rootsim_error(bool fatal, const char *msg, ...) {
 	if(fatal) {
 		// Notify all KLT to shut down the simulation
 		sim_error = true;
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -205,6 +206,9 @@ int GetNeighbours(unsigned int **neighbours) {
 
 	// Gets current agent's position
 	region_id = agent_position[current_lp];
+	if (region_id > region_c) {
+		rootsim_error(true, "Met impossible condition for agent's position\n");
+	}
 
 	// Counts the other agent that are present in the same region
 	count = 0;
@@ -231,7 +235,6 @@ int GetNeighbours(unsigned int **neighbours) {
 }
 
 
-// TODO: stub
 void InitialPosition(unsigned int region) {
 
 	printf("INFO: agent %d set in region %d\n", current_lp, region);
@@ -343,7 +346,6 @@ bool check_termination(void) {
 
 // API implementation
 void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size) {
-	// DC: environment_interaction -> environment_update
 	queue_insert(region, UINT_MAX, UINT_MAX, NULL, environment_update, time, EXECUTION_EnvironmentUpdate, args, size);
 	printf("INFO: EnvironmentUpdate event queued at time %f\n", time);
 }
@@ -361,6 +363,16 @@ void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time
 void Move(unsigned int agent, unsigned int destination, simtime_t time) {
 	queue_insert(destination, agent, UINT_MAX, NULL, NULL, time, EXECUTION_Move, NULL, 0);
 	printf("INFO: Move event queued at time %f\n", time);
+}
+
+void move(unsigned int agent, unsigned int destination) {
+	// TODO: !!! in caso di rollback non funziona nulla !!!
+	unsigned int source;
+
+	source = agent_position[agent];
+	agent_position[agent] = destination;
+	presence_matrix[destination][agent] = true;
+	presence_matrix[source][agent] = false;
 }
 
 
@@ -419,6 +431,12 @@ void thread_loop(unsigned int thread_id) {
 		// then run a rollback and exit
 		if(check_waiting() == 1) {
 			log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_msg.timestamp);
+			if(current_msg.type == EXECUTION_Move) {
+				// If the event is a move, than it can be handled entirely here
+				printf("ATTENZIONE IL ROLLBACK DELLA MOVE VA IMPLEMENTATO!\n");
+				move(0, 0);
+				break;
+			}
 			execute_undo_event(window);
 			break;
 		}
@@ -548,12 +566,12 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 
 	// Once the structres have been properly initialized it calls the setup function
 	// provided as callback by the application
-	agent_c = agentc;
-	agent_initialization = agent_init;
-	
 	region_c = regionc;
 	region_initialization = region_init;
 
+	agent_c = agentc;
+	agent_initialization = agent_init;
+	
 	// Check whether agents' position has been properly initialized by InitialPosition invocation
 	for(i = 0; i < agent_c; i++) {
 		if (agent_position[i] < 0) {

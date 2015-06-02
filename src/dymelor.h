@@ -20,13 +20,12 @@
 #define MASK 0x00000001		// Mask used to check, set and unset bits
 
 
-//#define NUM_CHUNKS_PER_BLOCK 32
 #define NUM_CHUNKS_PER_BLOCK 32
 #define BLOCK_SIZE sizeof(unsigned int)
 
 
 #define MIN_CHUNK_SIZE 64	// Size (in bytes) of the smallest chunk provideable by DyMeLoR
-#define MAX_CHUNK_SIZE 2048	// Size (in bytes) of the biggest one. Notice that if this number
+#define MAX_CHUNK_SIZE 1024 * 1024	// Size (in bytes) of the biggest one. Notice that if this number
 				// is too large, performance (and memory usage) might be affected.
 				// If it is too small, large amount of memory requests by the
 				// application level software (i.e, larger than this number)

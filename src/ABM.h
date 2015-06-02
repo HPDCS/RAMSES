@@ -121,7 +121,7 @@ extern void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, 
 extern void InitialPosition(unsigned int region);
 
 /**
- * Once setup, it starts the simulation using the specified number of threads
+ * Once set up the simulatione engine, it starts the simulation using the specified number of threads
  *
  * @param n_threads Number of threads to use
  */
@@ -142,7 +142,7 @@ extern void *GetAgentState(unsigned int agent_id);
 /**
  * Return the currente region's state.
  * 
- * @param region_id The id of the target agent.
+ * @param region_id The id of the target region.
  * @return A pointer to the state's structure.
  */
 extern void *GetRegionState(unsigned int region_id);

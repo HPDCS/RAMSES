@@ -9,7 +9,7 @@
 #include <float.h>
 
 
-#define MAX_LPs	2048
+#define MAX_LPs	4096
 
 #define MAX_DATA_SIZE		16
 #define THR_POOL_SIZE		3

@@ -9,7 +9,7 @@
 #include "region.h"
 
 // Global variables
-unsigned int number_of_agents = 4;
+unsigned int number_of_agents = 1;
 unsigned int number_of_regions = 1;
 
 // Declaration of the client side callback functions
@@ -64,6 +64,8 @@ void *agent_init(unsigned int id) {
 	// Sets the starting region for the current agent
 	// It randomly chooses a region to settle the robot
 	state->current_cell = RandomRange(0, number_of_regions - 1);
+	cell_state_type *region = GetRegionState(state->current_cell);
+	region->present_agents++;
 	InitialPosition(state->current_cell);
 	
 	// Fires the initial interaction event
@@ -144,6 +146,7 @@ void agent_interaction(unsigned int agent_a, unsigned int agent_b, simtime_t now
 void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t now, void *args, size_t size) {
 	agent_state_type *agent, *mate;
 	cell_state_type *region;
+	cell_state_type *target;
 	map_t *map;
 	
 	unsigned int number_of_mates;
@@ -167,7 +170,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 
 	// Update the location of the agent
 	agent->current_cell = region_id;
-	
+
 	// Updates robot's knowledge
 	map = &(agent->visit_map[region_id]);
 	if (map == NULL) {
@@ -191,18 +194,17 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	if (agent->target_cell == region_id) {
 		agent->target_cell = UINT_MAX;
 	}
-	
+
 	// Checks whether there is any other robot in the same region
-	if (region->present_agents > 1) {
+	// Retrieve the list of mates' ids
+	number_of_mates = GetNeighbours(&mates);
+	if (number_of_mates > 0) {
 		// There are other robot here other than me
-		
-		// Retrieve the list of mates' ids
-		number_of_mates = GetNeighbours(&mates);
 		
 		// I'm going to exchange map's information with each mate
 		// i've found in the current region
 		for (index = 0; index < number_of_mates; index ++) {
-			// TODO: schedulare un evento AgentInteraction invece che gestirlo direttamente quì?
+			// TODO: schedulare un evento AgentInteraction invece che gestirlo direttamente qui?
 		
 			mate = GetAgentState(mates[index]);
 			
@@ -242,6 +244,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 		} while(GetTargetRegion(agent->current_cell, agent->direction) < 0);
 	}
 	*/
+
 	// Get the region's id from the knowledge of current cell and the chosen direction
 	step_cell = FindRegion(TOPOLOGY_SQUARE);//GetTargetRegion(agent->current_cell, agent->direction);
 	step_time = now + Expent(AGENT_TIME_STEP);
@@ -249,11 +252,24 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	// Check termination
 	if((double)agent->visited_cells / number_of_regions > .95) {
 		StopSimulation();
-		
-		printf("Robot %d: %.02f percent --- %d meetings so far --- currently in cell %d\n", agent_id,
-			(double)agent->visited_cells / number_of_regions * 100, agent->met_robots, agent->current_cell);
 		return;
 	}
+
+	// Perform the movement
+	target = GetRegionState(step_cell);
+
+	printf("APP :: move action of agent %d from region %d to region %d\n", agent_id, agent->current_cell, step_cell);
+
+	printf("APP :: region %d had %d agents and region %d had %d\n", region_id, region->present_agents, step_cell, target->present_agents);
+
+	region->present_agents--;
+	target->present_agents++;
+	agent->current_cell = step_cell;
+
+	printf("APP :: region %d has now %d agents and region %d has %d\n", region_id, region->present_agents, step_cell, target->present_agents);
+
+	Move(agent_id, step_cell, step_time);
+	step_time += Expent(AGENT_TIME_STEP);
 
 	// Schedule a new intercation event between the agent and the next region
 	EnvironmentInteraction(agent_id, step_cell, step_time, region_interaction, NULL, 0);
@@ -292,15 +308,23 @@ void update_region(unsigned int region_id, simtime_t now, void *args, size_t siz
  * @param size Size (in bytes) of the arguments vector
  */
 void move(unsigned int agent_id, unsigned int region_id, simtime_t time, void* args, size_t size) {
-	cell_state_type *region;
+	cell_state_type *region;		// Target region's state
+	cell_state_type *current;		// Current position of the agent
+	agent_state_type *agent;		// Current agent's state
+	simtime_t step_time;
+
+}
+
+static void print_result() {
+	unsigned int agent_id;
 	agent_state_type *agent;
 
-	printf("APP :: move action\n");
-
-	// Gets the states
-	region = GetRegionState(region);
-	agent = GetAgentState(agent);
-
+	for (agent_id = 0; agent_id < number_of_agents; agent_id++) {
+		agent = GetAgentState(agent_id);
+		
+		printf("Robot %d: %.02f percent --- %d meetings so far --- currently in cell %d\n", agent_id,
+			(double)agent->visited_cells / number_of_regions * 100, agent->met_robots, agent->current_cell);
+	}
 }
 
 
@@ -328,6 +352,8 @@ int main(int argc, char** argv) {
 	
 	// Starting the simulation process
 	StartSimulation(number_of_threads);
+
+	print_result();
 
 	return 0;
 }

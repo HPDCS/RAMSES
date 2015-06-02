@@ -122,6 +122,7 @@ static void call_it(void *f, msg_t *m) {
 		case EXECUTION_Move:
 			// Manca la callback!
 			//(*interaction)(m->entity1, m->entity2, m->timestamp);
+			move(m->entity1, m->entity2);
 			break;
 
 		default:
