@@ -158,7 +158,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	
 	// TODO: come devono essere gestiti i parametri della funzione?
 
-//	print_info("APP :: region_interaction of agent %d in region %d\n", agent_id, region_id);
+	//printf("APP :: region_interaction of agent %d in region %d\n", agent_id, region_id);
 	
 	// Retrieve the states given the identification numbers of both agent and region
 	region = GetRegionState(region_id);
@@ -208,6 +208,9 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 		// i've found in the current region
 		for (index = 0; index < number_of_mates; index++) {
 			// TODO: schedulare un evento AgentInteraction invece che gestirlo direttamente qui?
+			
+			if(mates[index] > number_of_agents)
+				continue;
 
 			if(mates[index] > number_of_agents)
 				continue;
@@ -303,6 +306,7 @@ void update_region(unsigned int region_id, simtime_t now, void *args, size_t siz
 	simtime_t step_time;
 
 //	printf("APP :: update_region region %d\n", region_id);
+
 	// Compute the new simulation time at which the vent must be scheduled
 	step_time = now + (simtime_t) Expent(REGION_KEEP_ALIVE_INTERVAL);
 
