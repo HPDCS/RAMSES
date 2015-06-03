@@ -48,7 +48,6 @@ static timer simulation_stop;
 static unsigned int rollbacks = 0;
 static unsigned int safe = 0;
 static unsigned int unsafe = 0;
-static __thread unsigned int events = 0;
 
 
 __thread int delta_count = 0;
@@ -401,7 +400,6 @@ void thread_loop(unsigned int thread_id) {
 #endif
   
 	tid = thread_id;
-	events = 0;
   
 	while(!stop && !sim_error) {
 
@@ -488,12 +486,6 @@ void thread_loop(unsigned int thread_id) {
 
 	flush();
 
-	events++;
-	if((events % 1000) == 0) {
-		printf("SIM: Thread %d has processed %d events\n", tid, events);
-	}
-
- 
 	//	can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
 	//	stop = check_termination();
 
@@ -533,7 +525,7 @@ void *start_thread(void *args) {
 
 	thread_loop(tid);
 
-	printf("Thread %d has processed %d events\n", tid, events);
+	printf("Thread %d exited\n", tid);
 
 	pthread_exit(NULL);
 }

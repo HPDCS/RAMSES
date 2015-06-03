@@ -8,7 +8,6 @@
 #include "agent.h"
 #include "region.h"
 
-#define printf(...) {}
 
 // Global variables
 unsigned int number_of_agents = 1;
@@ -159,7 +158,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	
 	// TODO: come devono essere gestiti i parametri della funzione?
 
-	printf("APP :: region_interaction of agent %d in region %d\n", agent_id, region_id);
+//	print_info("APP :: region_interaction of agent %d in region %d\n", agent_id, region_id);
 	
 	// Retrieve the states given the identification numbers of both agent and region
 	region = GetRegionState(region_id);
@@ -203,14 +202,22 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	if (number_of_mates > 1) {
 		// There are other robot here other than me
 		
-//		printf("APP :: found %d mates in region %d\n", number_of_mates, region_id);
+	//	printf("APP :: found %d mates in region %d\n", number_of_mates, region_id);
 		
 		// I'm going to exchange map's information with each mate
 		// i've found in the current region
-		for (index = 0; index < number_of_mates; index ++) {
+		for (index = 0; index < number_of_mates; index++) {
 			// TODO: schedulare un evento AgentInteraction invece che gestirlo direttamente qui?
 
+			if(mates[index] > number_of_agents)
+				continue;
+				
 			mate = GetAgentState(mates[index]);
+
+			if(mate == NULL) {
+				printf("ERRORE\n");
+				exit(1);
+			}
 			
 			// Computes and exchanges map's diff, at the same time
 			// when a view exchange takes palce, 'updated' robot's target
@@ -238,23 +245,23 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	}
 	
 	// Compute a direction to move towards
-	/*agent->direction = compute_direction(agent);
+	agent->direction = compute_direction(agent);
 	
 	// If computed direction is UINT_MAX, then there is no path to the target.
 	// Just take a random direction
 	if(agent->direction == UINT_MAX) {
 		do {
 			agent->direction = RandomRange(0, 3);
-		} while(GetTargetRegion(agent->current_cell, agent->direction) < 0);
+		} while((signed int)GetTargetRegion(agent->current_cell, agent->direction) < 0);
 	}
-	*/
+	
 
 	// Get the region's id from the knowledge of current cell and the chosen direction
-	step_cell = FindRegion(TOPOLOGY_SQUARE);//GetTargetRegion(agent->current_cell, agent->direction);
+	step_cell = GetTargetRegion(agent->current_cell, agent->direction);
 	step_time = now + Expent(AGENT_TIME_STEP);
 
-	if(step_cell < 0)
-		printf("APP :: target region cannot be found\n", step_cell);
+/*	if((signed int)step_cell < 0)
+		printf("APP :: target region cannot be found\n", step_cell);*/
 
 	// Check termination
 	if((double)agent->visited_cells / number_of_regions > .95) {
@@ -265,15 +272,15 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	// Perform the movement
 	target = GetRegionState(step_cell);
 
-	printf("APP :: move action of agent %d from region %d to region %d\n", agent_id, agent->current_cell, step_cell);
+//	printf("APP :: move action of agent %d from region %d to region %d\n", agent_id, agent->current_cell, step_cell);
 
-	printf("APP :: region %d had %d agents and region %d had %d\n", region_id, region->present_agents, step_cell, target->present_agents);
+//	printf("APP :: region %d had %d agents and region %d had %d\n", region_id, region->present_agents, step_cell, target->present_agents);
 
 	region->present_agents--;
 	target->present_agents++;
 	agent->current_cell = step_cell;
 
-	printf("APP :: region %d has now %d agents and region %d has %d\n", region_id, region->present_agents, step_cell, target->present_agents);
+//	printf("APP :: region %d has now %d agents and region %d has %d\n", region_id, region->present_agents, step_cell, target->present_agents);
 
 	Move(agent_id, step_cell, step_time);
 	step_time += Expent(AGENT_TIME_STEP);
@@ -295,7 +302,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 void update_region(unsigned int region_id, simtime_t now, void *args, size_t size) {
 	simtime_t step_time;
 
-	printf("APP :: update_region region %d\n", region_id);
+//	printf("APP :: update_region region %d\n", region_id);
 	// Compute the new simulation time at which the vent must be scheduled
 	step_time = now + (simtime_t) Expent(REGION_KEEP_ALIVE_INTERVAL);
 
