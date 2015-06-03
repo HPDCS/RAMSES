@@ -7,7 +7,6 @@
 #include "region.h"
 
 
-
 double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *good_direction) {
 	unsigned int i;
 	double min_distance = INFTY;
@@ -17,7 +16,7 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 	unsigned int tentative_cell;
 	double distance_increment;
 
-	printf("a_star invocation with current_cell=%d\n", current_cell);
+	//printf("a_star invocation with current_cell=%d\n", current_cell);
 
 	*good_direction = UINT_MAX;
 	SET_BIT(state->a_star_map, current_cell);
@@ -33,10 +32,10 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 		// Note that GetTargetRegion could return -1 in case we tring
 		// to move across a boundary.
 		tentative_cell = GetTargetRegion(current_cell, i);
-		printf("Agent in cell %u is tring to move towards %s [%u] (cell %d)\n", current_cell, direction_name(i), i,  tentative_cell);
+		//printf("Agent in cell %u is tring to move towards %s [%u] (cell %d)\n", current_cell, direction_name(i), i,  tentative_cell);
 		if ((signed int)tentative_cell < 0) {
 			// In that direction no region is reachable
-			printf("Cannot move from cell %u in direction %s [%u] (cell %d)\n", current_cell, direction_name(i), i, tentative_cell);
+			//printf("Cannot move from cell %u in direction %s [%u] (cell %d)\n", current_cell, direction_name(i), i, tentative_cell);
 			continue;
 		}
 
@@ -51,7 +50,7 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 
 			// Is this the target?
 			if(current_cell == state->target_cell) {
-				printf("TROVATO! current cell %d target %d\n", current_cell, state->target_cell);
+				//printf("TROVATO! current cell %d target %d\n", current_cell, state->target_cell);
 				*good_direction = i;
 				return 0.0;
 			}
@@ -79,8 +78,6 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 
 unsigned int compute_direction(agent_state_type *state) {
 	unsigned int good_direction = UINT_MAX;
-
-	printf("Computing a new direction\n");
 
 	bzero(state->a_star_map, BITMAP_SIZE(number_of_regions));
 

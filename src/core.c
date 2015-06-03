@@ -48,7 +48,6 @@ static timer simulation_stop;
 static unsigned int rollbacks = 0;
 static unsigned int safe = 0;
 static unsigned int unsafe = 0;
-static __thread unsigned int events = 0;
 
 
 __thread int delta_count = 0;
@@ -401,7 +400,6 @@ void thread_loop(unsigned int thread_id) {
 #endif
   
 	tid = thread_id;
-	events = 0;
   
 	while(!stop && !sim_error) {
 
@@ -488,50 +486,6 @@ void thread_loop(unsigned int thread_id) {
 
 	flush();
 
-	events++;
-	if((events % 1000) == 0) {
-		printf("SIM: Thread %d has processed %d events\n", tid, events);
-	}
-
- 
-	//	can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
-	//	stop = check_termination();
-
-		#ifdef THROTTLING
-		if((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
-			hill_climbing();
-		#endif
-
-		if(tid == _MAIN_PROCESS) {
-			evt_count++;
-		if((evt_count - 10000 * (evt_count / 10000)) == 0)
-			printf("TIME: %f\n", current_lvt);
-		}
-			
-		//printf("Timestamp %f executed\n", evt.timestamp);
-	}
-
-	// This thread is exiting, therefore it has to come out
-	// from the safety check otherwise it generate a starvation
-	min_output_time(INFTY);
-
-	//printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
-
-#ifdef FINE_GRAIN_DEBUG
-
-	printf("Thread %d executed in non-transactional block: %d\n"
-	"Thread executed in transactional block: %d\n", 
-	tid, non_transactional_ex, transactional_ex);
-#endif
-
-}
-
-
-
-void *start_thread(void *args) {
-	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
-
-	thread_loop(tid);
 
 	printf("Thread %d has processed %d events\n", tid, events);
 
