@@ -5,12 +5,11 @@
 unsigned int get_target_id(unsigned int region_id, unsigned int direction) {
 	// TODO: stub to be implemented
 	return 0;
-}
-
-bool is_reachable(unsigned int region, unsigned int neighbour) {
-	// TODO: stub to be implemented
-	return true;
 }*/
+
+bool is_reachable(cell_state_type *region, unsigned int direction) {
+	return !region->obstacles[direction];
+}
 
 
 unsigned int map_cartesian_to_linear(unsigned int x, unsigned int y) {

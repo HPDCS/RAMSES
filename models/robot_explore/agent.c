@@ -47,7 +47,10 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 
 		// Can I go in that direction?
 		// TODO: signed comparison
-		if(state->visit_map[current_cell].neighbours[i] != -1) {
+		//if(state->visit_map[current_cell].neighbours[i] != -1) {
+		cell_state_type *region;
+		region = GetRegionState(current_cell);
+		if (!region->obstacles[i]) {
 
 			// Is this the target?
 			if(current_cell == state->target_cell) {

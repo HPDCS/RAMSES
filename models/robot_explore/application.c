@@ -101,7 +101,7 @@ void *region_init(unsigned int id) {
 	// Setup region properties, i.e. obstacles
 	// Chooeses randomly if the current region has an obstacle or not
 	if (Random() < OBSTACLE_PROB) {
-		state->obstacles[RandomRange(0, CELL_EDGES)];
+		state->obstacles[RandomRange(0, CELL_EDGES)] = true;
 	}
 	
 	// Fires the initial interaction event
