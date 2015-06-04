@@ -43,19 +43,15 @@ void *agent_init(unsigned int id) {
 	bzero(state, sizeof(agent_state_type));
 	
 	// Initializes visit map
-	state->visit_map = malloc(number_of_regions * sizeof(map_t));
+	state->visit_map = malloc(number_of_regions * sizeof(unsigned char));
 	if (state->visit_map == NULL) {
 		printf("Unable to allocate memory for a new agent\n");
 		exit(1);
 	}
-	for(index = 0; index < number_of_regions; index++) {
-		map_t *map = (state->visit_map + index);
-		map->visited = false;
-		bzero(map->neighbours, sizeof(unsigned int) * CELL_EDGES);
-	}
+	bzero(state->visit_map, number_of_regions * sizeof(unsigned char));
 	
 	// Initializes visit map
-	state->a_star_map = malloc(number_of_regions * sizeof(map_t));
+	state->a_star_map = malloc(number_of_regions * sizeof(unsigned char));
 	if (state->a_star_map == NULL) {
 		printf("Unable to allocate memory for a new agent\n");
 		exit(1);
@@ -100,8 +96,10 @@ void *region_init(unsigned int id) {
 	
 	// Setup region properties, i.e. obstacles
 	// Chooeses randomly if the current region has an obstacle or not
-	if (Random() < OBSTACLE_PROB) {
-		state->obstacles[RandomRange(0, CELL_EDGES)] = true;
+	for(i = 0; i < CELL_EDGES; i++){
+		if (Random() < OBSTACLE_PROB) {
+			SET_BIT_AT(state->obstacles, i);
+		}
 	}
 	
 	// Fires the initial interaction event

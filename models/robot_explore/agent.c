@@ -19,7 +19,8 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 	//printf("a_star invocation with current_cell=%d\n", current_cell);
 
 	*good_direction = UINT_MAX;
-	SET_BIT(state->a_star_map, current_cell);
+	//SET_BIT(state->a_star_map, current_cell);
+	BITMAP_SET_BIT(state->a_star_map, current_cell);
 
 	// Translates the selected target cell into the cartesian coordinates
 	// in order to perform path search
@@ -41,7 +42,7 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 		}
 
 		// We don't simply visit a cell already visited!
-		if(CHECK_BIT(state->a_star_map, tentative_cell)) {
+		if(BITMAP_CHECK_BIT(state->a_star_map, tentative_cell)) {
 			continue;
 		}
 
@@ -50,7 +51,7 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 		//if(state->visit_map[current_cell].neighbours[i] != -1) {
 		cell_state_type *region;
 		region = GetRegionState(current_cell);
-		if (!region->obstacles[i]) {
+		if (!CHECK_BIT_AT(region->obstacles, i) {
 
 			// Is this the target?
 			if(current_cell == state->target_cell) {
