@@ -24,12 +24,12 @@
 		map_b = agent_b->visit_map;
 
 		// Exchange map informations and recomputes current frontier
-		if (BITMAP_CHECK_BIT(map_a, index) == 1 && BITMAP_CHECK_BIT(map_b, index) == 0) {
+		if (BITMAP_CHECK_BIT(map_a, index) && BITMAP_CHECK_BIT(map_b, index) == 0) {
 			BITMAP_SET_BIT(map_b, index);
 			agent_b->visited_cells++;
 			agent_b->target_cell = closest_frontier(agent_b, -1);
 		}
-		if (BITMAP_CHECK_BIT(map_a, index) == 0 && BITMAP_CHECK_BIT(map_b, index) == 1) {
+		if (BITMAP_CHECK_BIT(map_a, index) == 0 && BITMAP_CHECK_BIT(map_b, index)) {
 			BITMAP_SET_BIT(map_a, index);
 			agent_a->visited_cells++;
 			agent_a->target_cell = closest_frontier(agent_a, -1);
@@ -70,11 +70,31 @@
 
 void dump_agent_knowledge(agent_state_type *agent) {
 	int index;
-
+	
 	for (index = 0; index < number_of_regions; index++) {
-		printf("%d ", BITMAP_CHECK_BIT(agent->visit_map, index) >> (index % 8));
+		printf("%#3d ", index);
+	}
+	printf("\n");
+	
+	for (index = 0; index < number_of_regions; index++) {
+		printf("%#3d ", BITMAP_CHECK_BIT(agent->visit_map, index) >> (index % 8));
 	}
 	printf("\tVisited %d regions\n", agent->visited_cells);
+}
+
+
+void dump_a_star_map(agent_state_type *agent) {
+	int index;
+
+	for (index = 0; index < number_of_regions; index++) {
+		printf("%#3d ", index);
+	}
+	printf("\n");
+	
+	for (index = 0; index < number_of_regions; index++) {
+		printf("%#3d ", BITMAP_CHECK_BIT(agent->a_star_map, index) >> (index % 8));
+	}
+	printf("\n");
 }
 
 void hexdump (void *addr, int len) {
