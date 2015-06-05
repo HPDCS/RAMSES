@@ -34,15 +34,16 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 		// to move across a boundary.
 		tentative_cell = GetTargetRegion(current_cell, i);
 
-		//printf("Agent in cell %u is tring to move towards %s [%u] (cell %d)\n", current_cell, direction_name(i), i,  tentative_cell);
+		printf("Agent in cell %u is tring to move towards %s [%u] (cell %d)\n", current_cell, direction_name(i), i,  tentative_cell);
 		if ((signed int)tentative_cell < 0) {
 			// In that direction no region is reachable
-			//printf("Cannot move from cell %u in direction %s [%u] (cell %d)\n", current_cell, direction_name(i), i, tentative_cell);
+			printf("Cannot move from cell %u in direction %s [%u] (cell %d)\n", current_cell, direction_name(i), i, tentative_cell);
 			continue;
 		}
 
 		// We don't simply visit a cell already visited!
 		if(BITMAP_CHECK_BIT(state->a_star_map, tentative_cell)) {
+			printf("Region %d has already been visited\n", tentative_cell);
 			continue;
 		}
 
@@ -51,29 +52,31 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 		//if(state->visit_map[current_cell].neighbours[i] != -1) {
 		cell_state_type *region;
 		region = GetRegionState(current_cell);
-		if (!CHECK_BIT_AT(region->obstacles, i) {
+		if (CHECK_BIT_AT(region->obstacles, i) == 1) {
+			printf("Region %d in direction %d has an obstacle trying another choice\n", current_cell, i);
+			continue;
+		}
 
-			// Is this the target?
-			if(current_cell == state->target_cell) {
-				//printf("TROVATO! current cell %d target %d\n", current_cell, state->target_cell);
-				*good_direction = i;
-				return 0.0;
-			}
+		// Is this the target?
+		if(current_cell == state->target_cell) {
+			printf("TROVATO! current cell %d target %d\n", current_cell, state->target_cell);
+			*good_direction = i;
+			return 0.0;
+		}
 
-			// Compute the distance from the target if we make that move
-			map_linear_to_cartesian(tentative_cell, &x2, &y2);
-			dx = x2-x1;
-			dy = y2-y1;
-			
-			distance_increment = a_star(state, tentative_cell, good_direction);
-			// TODO: optimize?
-			current_distance = sqrt( dx*dx + dy*dy );
+		// Compute the distance from the target if we make that move
+		map_linear_to_cartesian(tentative_cell, &x2, &y2);
+		dx = x2-x1;
+		dy = y2-y1;
+		
+		distance_increment = a_star(state, tentative_cell, good_direction);
+		// TODO: optimize?
+		current_distance = sqrt( dx*dx + dy*dy );
 
-			// Is it a good choice?
-			if(current_distance < INFTY && current_distance < min_distance) {
-				min_distance = current_distance;
-				*good_direction = i;
-			}
+		// Is it a good choice?
+		if(current_distance < INFTY && current_distance < min_distance) {
+			min_distance = current_distance;
+			*good_direction = i;
 		}
 	}
 
@@ -84,11 +87,11 @@ double a_star(agent_state_type *state, unsigned int current_cell, unsigned int *
 unsigned int compute_direction(agent_state_type *state) {
 	unsigned int good_direction = UINT_MAX;
 
-	bzero(state->a_star_map, BITMAP_SIZE(number_of_regions));
+	BITMAP_BZERO(state->a_star_map, number_of_regions);
 
 	a_star(state, state->current_cell, &good_direction);
 
-	//printf("Agent in %u is moving towards %s [%u] (cell %d)\n", state->current_cell, direction_name(good_direction), good_direction, GetTargetRegion(state->current_cell, good_direction));
+	printf("Direction computed: Agent in region %u moves towards %s [%u]\n", state->current_cell, direction_name(good_direction), good_direction);
 
 	return good_direction;
 }
@@ -106,7 +109,7 @@ unsigned int closest_frontier(agent_state_type *state, unsigned int exclude) {
 
 	for(i = 0; i < number_of_regions; i++) {
 
-		if(!state->visit_map[i].visited) {
+		if(!BITMAP_CHECK_BIT(state->visit_map, i)) {
 
 			if(i == exclude) {
 				// I know this is a frontier, but I don't want to go there

@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include "application.h"
+
 #define OBSTACLE_PROB	0.1
 #define REGION_KEEP_ALIVE_INTERVAL 50
 
