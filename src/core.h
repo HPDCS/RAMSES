@@ -42,9 +42,6 @@
 //#define log_info(color, ...) do_log_info(color, __VA_ARGS__)
 #define log_info(color, ...) {}
 
-//#define log_info(...) log_cinfo(NC,__VA_ARGS__) 
-
-
 typedef struct __msg_t {  
 	unsigned int sender_id;
 	unsigned int receiver_id;

@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include "application.h"
+
 #define OBSTACLE_PROB	0.1
 #define REGION_KEEP_ALIVE_INTERVAL 50
 
@@ -25,7 +27,7 @@ unsigned int get_target_id(unsigned int region_id, unsigned int direction);
  * @param neighbour Region's id of the neighbour we want to compute reachability
  * @return True if the <em>neighbour</em> can be reached from <em>region</em>, false otherwise
  */
-bool is_reachable(unsigned int region, unsigned int neighbour);
+bool is_reachable(cell_state_type *region, unsigned int direction);
 
 unsigned int map_hexagon_to_linear(unsigned int x, unsigned int y);
 

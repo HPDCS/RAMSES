@@ -7,9 +7,8 @@ unsigned int get_target_id(unsigned int region_id, unsigned int direction) {
 	return 0;
 }
 
-bool is_reachable(unsigned int region, unsigned int neighbour) {
-	// TODO: stub to be implemented
-	return true;
+bool is_reachable(cell_state_type *region, unsigned int direction) {
+	return !region->obstacles[direction];
 }*/
 
 
@@ -51,7 +50,8 @@ void map_linear_to_cartesian(unsigned int linear, unsigned int *x, unsigned int 
 
 void print_topology_map() {
 	unsigned int edge;
-	unsigned int x, y;
+	unsigned int x, y, d;
+	cell_state_type *region;
 
 	edge = sqrt(number_of_regions);
 

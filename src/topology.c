@@ -148,6 +148,7 @@ static unsigned int get_target_id(unsigned int region_id, unsigned int direction
 					ny = y;
 					break;
 				default:
+					printf("Direction %d unknown\n", direction);
 					rootsim_error(true, "Met an impossible condition at %s:%d. Aborting...\n", __FILE__, __LINE__);
 			}
 

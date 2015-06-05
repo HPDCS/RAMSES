@@ -8,6 +8,7 @@
 #include "agent.h"
 #include "region.h"
 
+
 // Global variables
 unsigned int number_of_agents = 1;
 unsigned int number_of_regions = 1;
@@ -42,28 +43,26 @@ void *agent_init(unsigned int id) {
 	bzero(state, sizeof(agent_state_type));
 	
 	// Initializes visit map
-	state->visit_map = malloc(number_of_regions * sizeof(map_t));
+	state->visit_map = ALLOCATE_BITMAP(number_of_regions);
 	if (state->visit_map == NULL) {
 		printf("Unable to allocate memory for a new agent\n");
 		exit(1);
 	}
-	for(index = 0; index < number_of_regions; index++) {
-		map_t *map = (state->visit_map + index);
-		map->visited = false;
-		bzero(map->neighbours, sizeof(unsigned int) * CELL_EDGES);
-	}
+	BITMAP_BZERO(state->visit_map, number_of_regions);
+	printf("Allocated visit_map of %d bytes\n", BITMAP_SIZE(number_of_regions));
 	
 	// Initializes visit map
-//	state->a_star_map = malloc(number_of_regions * sizeof(map_t));
-//	if (state->a_star_map == NULL) {
-//		printf("Unable to allocate memory for a new agent\n");
-//		exit(1);
-//	}
-//	bzero(state->a_star_map, number_of_regions * sizeof(map_t));
+	state->a_star_map = ALLOCATE_BITMAP(number_of_regions);
+	if (state->a_star_map == NULL) {
+		printf("Unable to allocate memory for a new agent\n");
+		exit(1);
+	}
+	BITMAP_BZERO(state->a_star_map, number_of_regions);
 	
 	// Sets the starting region for the current agent
 	// It randomly chooses a region to settle the robot
 	state->current_cell = RandomRange(0, number_of_regions - 1);
+	state->target_cell = UINT_MAX;
 	cell_state_type *region = GetRegionState(state->current_cell);
 	region->present_agents++;
 	InitialPosition(state->current_cell);
@@ -86,6 +85,7 @@ void *agent_init(unsigned int id) {
 void *region_init(unsigned int id) {
 	cell_state_type *state = NULL;
 	simtime_t start_time;
+	int i;
 
 //	printf("APP :: setup region %d\n", id);
 	
@@ -99,8 +99,11 @@ void *region_init(unsigned int id) {
 	
 	// Setup region properties, i.e. obstacles
 	// Chooeses randomly if the current region has an obstacle or not
-	if (Random() < OBSTACLE_PROB) {
-		state->obstacles[RandomRange(0, CELL_EDGES)];
+	for(i = 0; i < CELL_EDGES; i++){
+		if (Random() < OBSTACLE_PROB) {
+			SET_BIT_AT(state->obstacles, i);
+			printf("Region %d has an obstacle in direction %s\n", id, direction_name(i));
+		}
 	}
 	
 	// Fires the initial interaction event
@@ -147,7 +150,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	agent_state_type *agent, *mate;
 	cell_state_type *region;
 	cell_state_type *target;
-	map_t *map;
+	//map_t *map;
 	
 	unsigned int number_of_mates;
 	unsigned int *mates;
@@ -172,22 +175,32 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	agent->current_cell = region_id;
 
 	// Updates robot's knowledge
-	map = &(agent->visit_map[region_id]);
+	/*map = &(agent->visit_map[region_id]);
 	if (map == NULL) {
 		printf("Visit map is null!\n");
 		return;
-	}
+	}*/
 //	printf("cell %d is visited? %s\n", region_id, map->visited ? "TRUE" : "FALSE");
-	if (!map->visited) {
-		// If the region has not yet visited, then mark it and increment the counter
-		map->visited = true;
-		agent->visited_cells++;
+	if (BITMAP_CHECK_BIT(agent->visit_map, region_id) == 0) {
+
+//		printf("AGENT %d::", agent_id);
+//		printf("Region %d was not visited so far\n", region_id);
 		
+		// If the region has not yet visited, then mark it and increment the counter
+		//map->visited = true;
+		BITMAP_SET_BIT(agent->visit_map, region_id);
+		agent->visited_cells++;
+
 		// Updates the region's neighbours from the robot's perspective
-		memcpy(region->neighbours, map->neighbours, sizeof(unsigned int) * CELL_EDGES);
+		//memcpy(region->neighbours, map->neighbours, sizeof(unsigned int) * CELL_EDGES);
 	}
 
+//	printf("AGENT %d::", agent_id);
 //	printf("Visited %d cells over %d\n", agent->visited_cells, number_of_regions);
+
+	if((agent->visited_cells % 50) == 0) {
+		printf("AGENT %d:: visited %d regions so far\n", agent_id, agent->visited_cells);
+	}
 	
 	// Checks whether the cell represents robot's final target,
 	// otherwise continue randomly
@@ -200,15 +213,27 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	number_of_mates = GetNeighbours(&mates);
 	if (number_of_mates > 1) {
 		// There are other robot here other than me
-		
+
+//		printf("AGENT %d::", agent_id);
 //		printf("APP :: found %d mates in region %d\n", number_of_mates, region_id);
 		
 		// I'm going to exchange map's information with each mate
 		// i've found in the current region
-		for (index = 0; index < number_of_mates; index ++) {
+		for (index = 0; index < number_of_mates; index++) {
 			// TODO: schedulare un evento AgentInteraction invece che gestirlo direttamente qui?
+			
+			if(mates[index] > number_of_agents)
+				continue;
 
+			if(mates[index] > number_of_agents)
+				continue;
+				
 			mate = GetAgentState(mates[index]);
+
+			if(mate == NULL) {
+				printf("ERRORE\n");
+				exit(1);
+			}
 			
 			// Computes and exchanges map's diff, at the same time
 			// when a view exchange takes palce, 'updated' robot's target
@@ -236,23 +261,21 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	}
 	
 	// Compute a direction to move towards
-	/*agent->direction = compute_direction(agent);
+	agent->direction = compute_direction(agent);
 	
 	// If computed direction is UINT_MAX, then there is no path to the target.
 	// Just take a random direction
 	if(agent->direction == UINT_MAX) {
 		do {
 			agent->direction = RandomRange(0, 3);
-		} while(GetTargetRegion(agent->current_cell, agent->direction) < 0);
+		} while((signed int)GetTargetRegion(agent->current_cell, agent->direction) < 0);
 	}
-	*/
+
+//	printf("Agent %d has target %d and move toward %s\n", agent_id, agent->target_cell, direction_name(agent->direction));
 
 	// Get the region's id from the knowledge of current cell and the chosen direction
-	step_cell = FindRegion(TOPOLOGY_SQUARE);//GetTargetRegion(agent->current_cell, agent->direction);
+	step_cell = GetTargetRegion(agent->current_cell, agent->direction);
 	step_time = now + Expent(AGENT_TIME_STEP);
-
-//	if(step_cell < 0)
-//		printf("APP :: target region cannot be found\n", step_cell);
 
 	// Check termination
 	if((double)agent->visited_cells / number_of_regions > .95) {
@@ -263,8 +286,6 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 
 	// Perform the movement
 	target = GetRegionState(step_cell);
-
-//	printf("APP :: move action of agent %d from region %d to region %d at time %f\n", agent_id, agent->current_cell, step_cell, now);
 
 //	printf("APP :: region %d had %d agents and region %d had %d\n", region_id, region->present_agents, step_cell, target->present_agents);
 
@@ -328,8 +349,8 @@ static void print_result() {
 	for (agent_id = 0; agent_id < number_of_agents; agent_id++) {
 		agent = GetAgentState(agent_id);
 		
-		printf("Robot %d: %.02f percent --- %d meetings so far --- currently in cell %d\n", agent_id,
-			(double)agent->visited_cells / number_of_regions * 100, agent->met_robots, agent->current_cell);
+		printf("Robot %d: %.02f percent (%d / %d regions) --- %d meetings so far --- currently in cell %d\n", agent_id,
+			(double)agent->visited_cells / number_of_regions * 100, agent->visited_cells, number_of_regions, agent->met_robots, agent->current_cell);
 	}
 }
 
