@@ -31,7 +31,7 @@ void *agent_init(unsigned int id) {
 	simtime_t start_time;
 	int index;
 
-	printf("APP :: setup agent %d\n", id);
+//	printf("APP :: setup agent %d\n", id);
 
 	state = malloc(sizeof(agent_state_type));
 	if (state == NULL) {
@@ -54,12 +54,12 @@ void *agent_init(unsigned int id) {
 	}
 	
 	// Initializes visit map
-	state->a_star_map = malloc(number_of_regions * sizeof(map_t));
-	if (state->a_star_map == NULL) {
-		printf("Unable to allocate memory for a new agent\n");
-		exit(1);
-	}
-	bzero(state->a_star_map, number_of_regions * sizeof(map_t));
+//	state->a_star_map = malloc(number_of_regions * sizeof(map_t));
+//	if (state->a_star_map == NULL) {
+//		printf("Unable to allocate memory for a new agent\n");
+//		exit(1);
+//	}
+//	bzero(state->a_star_map, number_of_regions * sizeof(map_t));
 	
 	// Sets the starting region for the current agent
 	// It randomly chooses a region to settle the robot
@@ -87,7 +87,7 @@ void *region_init(unsigned int id) {
 	cell_state_type *state = NULL;
 	simtime_t start_time;
 
-	printf("APP :: setup region %d\n", id);
+//	printf("APP :: setup region %d\n", id);
 	
 	state = malloc(sizeof(cell_state_type));
 	if (state == NULL) {
@@ -123,7 +123,7 @@ void *region_init(unsigned int id) {
 void agent_interaction(unsigned int agent_a, unsigned int agent_b, simtime_t now, void *args, size_t size) {
 	// TODO: Da completare con l'inserimento della logica di scambio della mappa?
 	// Al momento è gestita da 'region_interaction'
-	printf("APP :: region_interaction between agent %d and agent %d\n", agent_a, agent_b);
+//	printf("APP :: region_interaction between agent %d and agent %d\n", agent_a, agent_b);
 }
 
 
@@ -157,7 +157,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	
 	// TODO: come devono essere gestiti i parametri della funzione?
 
-	printf("APP :: region_interaction of agent %d in region %d\n", agent_id, region_id);
+//	printf("APP :: region_interaction of agent %d in region %d\n", agent_id, region_id);
 	
 	// Retrieve the states given the identification numbers of both agent and region
 	region = GetRegionState(region_id);
@@ -251,27 +251,28 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	step_cell = FindRegion(TOPOLOGY_SQUARE);//GetTargetRegion(agent->current_cell, agent->direction);
 	step_time = now + Expent(AGENT_TIME_STEP);
 
-	if(step_cell < 0)
-		printf("APP :: target region cannot be found\n", step_cell);
+//	if(step_cell < 0)
+//		printf("APP :: target region cannot be found\n", step_cell);
 
 	// Check termination
 	if((double)agent->visited_cells / number_of_regions > .95) {
 		StopSimulation();
 		return;
+	} else {
 	}
 
 	// Perform the movement
 	target = GetRegionState(step_cell);
 
-	printf("APP :: move action of agent %d from region %d to region %d\n", agent_id, agent->current_cell, step_cell);
+//	printf("APP :: move action of agent %d from region %d to region %d at time %f\n", agent_id, agent->current_cell, step_cell, now);
 
-	printf("APP :: region %d had %d agents and region %d had %d\n", region_id, region->present_agents, step_cell, target->present_agents);
+//	printf("APP :: region %d had %d agents and region %d had %d\n", region_id, region->present_agents, step_cell, target->present_agents);
 
 	region->present_agents--;
 	target->present_agents++;
 	agent->current_cell = step_cell;
 
-	printf("APP :: region %d has now %d agents and region %d has %d\n", region_id, region->present_agents, step_cell, target->present_agents);
+//	printf("APP :: region %d has now %d agents and region %d has %d\n", region_id, region->present_agents, step_cell, target->present_agents);
 
 	Move(agent_id, step_cell, step_time);
 	step_time += Expent(AGENT_TIME_STEP);
@@ -293,7 +294,7 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 void update_region(unsigned int region_id, simtime_t now, void *args, size_t size) {
 	simtime_t step_time;
 
-	printf("APP :: update_region region %d\n", region_id);
+//	printf("APP :: update_region region %d\n", region_id);
 	// Compute the new simulation time at which the vent must be scheduled
 	step_time = now + (simtime_t) Expent(REGION_KEEP_ALIVE_INTERVAL);
 
@@ -345,7 +346,7 @@ int main(int argc, char** argv) {
 		number_of_regions = atoi(argv[3]);
 	}
 
-	printf("APP :: main\n");
+//	printf("APP :: main\n");
 
 	// Setup the topology
 	UseTopology(TOPOLOGY_SQUARE);
