@@ -60,7 +60,7 @@ void execution_time(simtime_t time) {
 
 				// Register the current event's timestamp in the waiting queue via CAS
 				simtime_t tmp;
-				if((tmp=__sync_val_compare_and_swap(UNION_CAST(&waiting_time_vector[region], long long *), waiting_time, time)) != time) {
+				if((tmp=__sync_val_compare_and_swap(UNION_CAST(&waiting_time_vector[region], long long *), UNION_CAST(waiting_time, long long), UNION_CAST(time, long long))) != UNION_CAST(time, long long)) {
 					log_info(NC, "Event %f has been registered for region %d\n", time, region);
 					break;
 				}
