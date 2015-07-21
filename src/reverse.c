@@ -102,17 +102,16 @@ static inline revwin *allocate_reverse_window(size_t size) {
  * @param size The size of the data value emdedded
  */
 static inline void create_reverse_instruction(uint64_t address, uint64_t value, size_t size) {
-	char mov[12];		// MOV instruction bytes (at most 9 bytes)
-	char mov2[12];		// second MOV in case of quadword data
+	unsigned char mov[12];		// MOV instruction bytes (at most 9 bytes)
+	unsigned char mov2[12];		// second MOV in case of quadword data
+	unsigned char movabs[10] = {0x48, 0xb8};
 	size_t mov_size;
-
-//      printf("creating reverse instruction: address= %llx, value= %llx, size= %d\n", address, value, size);
+	
+	uint32_t least_significant_bits;
 
 	// create the MOV to store the destination address movabs $0x11223344aabbccdd,%rax: 48 b8 dd cc bb aa 44 33 22 11
-	mov[0] = 0x48;
-	mov[1] = 0xb8;
-	memcpy(mov + 2, &address, 8);
-	add_reverse_insn(mov, 10);
+	memcpy(movabs + 2, &address, 8);
+	add_reverse_insn(movabs, 10);
 
 	// create the new MOV instruction accordingly to the data size
 	mov[0] = (uint64_t) 0;
@@ -153,13 +152,15 @@ static inline void create_reverse_instruction(uint64_t address, uint64_t value, 
 		mov[0] = mov2[0] = 0x48;
 		mov[1] = mov2[1] = 0xc7;
 		mov[2] = mov2[2] = 0x00;
+		
+		least_significant_bits = (uint32_t)value;
+		
 		//mov[4] = (uint32_t) value;
-		memcpy(mov + 3, &value, 4);
-
+		memcpy(mov + 3, &least_significant_bits, 4);
+		
 		// second part
-		//mov2[4] = (uint32_t) (value >> 32);
-		value = value >> 32;
-		memcpy(mov2 + 3, &value, 4);
+		least_significant_bits = (value >> 32) & ~(((0x1 << (sizeof(uint64_t) * 8) ) >> 32) << 1)
+		memcpy(mov2 + 3, &least_significant_bits, 4);
 		mov_size = 7;
 		break;
 
@@ -172,6 +173,9 @@ static inline void create_reverse_instruction(uint64_t address, uint64_t value, 
 	// hence it has to be written on the heap reverse window
 	add_reverse_insn(mov, mov_size);
 	if (size == 8) {
+		address += 4;
+		memcpy(movabs + 2, &address, 8);
+		add_reverse_insn(movabs, 10);
 		add_reverse_insn(mov2, mov_size);
 	}
 }
@@ -261,7 +265,7 @@ void *create_new_revwin(size_t size) {
 }
 
 void reset_window(void *w) {
-	revwin *win = (revwin *) w;
+	revwin *win = (revwin *)w;
 	win->pointer = ((char *)win->address + win->size);
 	initialize_revwin(win);
 }
