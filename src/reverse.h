@@ -56,8 +56,10 @@ extern void *create_new_revwin(size_t size);
  *
  * @param window A pointer to a reverse window
  */
-extern void free_revwin (void *window);
+extern void free_revwin(void *window);
 
 extern void execute_undo_event(void *w);
+
+extern void reset_window(void *window);
 
 #endif //__REVERSE__
