@@ -307,6 +307,11 @@ void *create_new_revwin(size_t size) {
 	return current_revwin;
 }
 
+void reset_window(void *w) {
+	revwin *win = (revwin *)w;
+	win->pointer = ((char *)win->address + size - 1);
+}
+
 void free_revwin (void *w) {
 	revwin *win = (revwin *)w;
 

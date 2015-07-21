@@ -77,6 +77,7 @@ void execution_time(simtime_t time) {
 		}
 	}
 
+//	printf("[%u] INFO: Lock on region %d acquired by event %f\n", tid, region, time);
 	log_info(NC, "Lock on region %d acquired by event %f\n", region, time);
 	
 	current_time_vector[tid] = time;

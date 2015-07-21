@@ -25,21 +25,16 @@
 
 #include "reverse.h"
 
-
-
-
 //id del processo principale
 #define _MAIN_PROCESS		0
 //Le abort "volontarie" avranno questo codice
 #define _ROLLBACK_CODE		127
 
-
 #define MAX_PATHLEN	512
-
 
 #define HILL_EPSILON_GREEDY	0.05
 #define HILL_CLIMB_EVALUATE	500
-#define DELTA 500  // tick count
+#define DELTA 500		// tick count
 #define HIGHEST_COUNT	5
 
 // Statistics
@@ -49,14 +44,10 @@ static unsigned int rollbacks = 0;
 static unsigned int safe = 0;
 static unsigned int unsafe = 0;
 
-
 __thread int delta_count = 0;
 __thread double abort_percent = 1.0;
 
-
-
 __thread int execution_state = EXECUTION_IDLE;
-
 
 static unsigned short int number_of_threads = 1;
 
@@ -64,25 +55,24 @@ static unsigned short int number_of_threads = 1;
 static init_f agent_initialization;
 static init_f region_initialization;
 
-//unsigned int *lock_vector;			/// Tells whether one region has been locked by some thread
-//unsigned int *waiting;		/// Maintains the successor thread waiting for that region
-//unsigned int *owner_vector;			/// Keeps track of the current owner of the region
+//unsigned int *lock_vector;                    /// Tells whether one region has been locked by some thread
+//unsigned int *waiting;                /// Maintains the successor thread waiting for that region
+//unsigned int *owner_vector;                   /// Keeps track of the current owner of the region
 
 unsigned int agent_c = 0;
 unsigned int region_c = 0;
 
 unsigned int *agent_position;
-bool **presence_matrix; // Rows are cells, columns are agents
+bool **presence_matrix;		// Rows are cells, columns are agents
 
 __thread simtime_t current_lvt = 0;
-__thread unsigned int current_lp = 0;		/// Represents the region's id
-__thread unsigned int tid = 0;				/// Logical id of the worker thread (may be different from the region's id)
+__thread unsigned int current_lp = 0;	/// Represents the region's id
+__thread unsigned int tid = 0;	/// Logical id of the worker thread (may be different from the region's id)
 
 // TODO: servono ?
 __thread unsigned long long evt_count = 0;
 __thread unsigned long long evt_try_count = 0;
 __thread unsigned long long abort_count_conflict = 0, abort_count_safety = 0;
-
 
 /* Total number of cores required for simulation */
 unsigned int n_cores;		// TODO: ?
@@ -90,9 +80,8 @@ unsigned int n_cores;		// TODO: ?
 bool stop = false;
 bool sim_error = false;
 
-void **states;		/// Linear vector which holds pointers to regions' (first) and agents' states
+void **states;			/// Linear vector which holds pointers to regions' (first) and agents' states
 bool *can_stop;
-
 
 void rootsim_error(bool fatal, const char *msg, ...) {
 	char buf[1024];
@@ -104,16 +93,15 @@ void rootsim_error(bool fatal, const char *msg, ...) {
 
 	fprintf(stderr, (fatal ? "[FATAL ERROR] " : "[WARNING] "));
 
-	fprintf(stderr, "%s", buf);\
+	fprintf(stderr, "%s", buf);
 	fflush(stderr);
 
-	if(fatal) {
+	if (fatal) {
 		// Notify all KLT to shut down the simulation
 		sim_error = true;
 		exit(EXIT_FAILURE);
 	}
 }
-
 
 /**
 * This is an helper-function to allow the statistics subsystem create a new directory
@@ -130,14 +118,14 @@ void _mkdir(const char *path) {
 
 	strncpy(opath, path, sizeof(opath));
 	len = strlen(opath);
-	if(opath[len - 1] == '/')
+	if (opath[len - 1] == '/')
 		opath[len - 1] = '\0';
 
 	// opath plus 1 is a hack to allow also absolute path
-	for(p = opath + 1; *p; p++) {
-		if(*p == '/') {
+	for (p = opath + 1; *p; p++) {
+		if (*p == '/') {
 			*p = '\0';
-			if(access(opath, F_OK))
+			if (access(opath, F_OK))
 				if (mkdir(opath, S_IRWXU))
 					if (errno != EEXIST) {
 						rootsim_error(true, "Could not create output directory", opath);
@@ -147,7 +135,7 @@ void _mkdir(const char *path) {
 	}
 
 	// Path does not terminate with a slash
-	if(access(opath, F_OK)) {
+	if (access(opath, F_OK)) {
 		if (mkdir(opath, S_IRWXU)) {
 			if (errno != EEXIST) {
 				if (errno != EEXIST) {
@@ -158,34 +146,32 @@ void _mkdir(const char *path) {
 	}
 }
 
-
 void throttling(unsigned int events) {
-  unsigned long long tick_count;
-  //~register int i;
+	unsigned long long tick_count;
+	//~register int i;
 
-  if(delta_count == 0)
-	return;
+	if (delta_count == 0)
+		return;
 
-  tick_count = CLOCK_READ();
-  while(true) {
-	if(CLOCK_READ() > tick_count + events * DELTA * delta_count)
-		break;
-  }
+	tick_count = CLOCK_READ();
+	while (true) {
+		if (CLOCK_READ() > tick_count + events * DELTA * delta_count)
+			break;
+	}
 }
 
 void hill_climbing(void) {
-	if((double)abort_count_safety / (double)evt_count < abort_percent && delta_count < HIGHEST_COUNT) {
+	if ((double)abort_count_safety / (double)evt_count < abort_percent && delta_count < HIGHEST_COUNT) {
 		delta_count++;
-//		printf("Incrementing delta_count to %d\n", delta_count);
+//              printf("Incrementing delta_count to %d\n", delta_count);
 	} else {
 /*		if(random() / RAND_MAX < HILL_EPSILON_GREEDY) {
 			delta_count /= (random() / RAND_MAX) * 10 + 1;
 		}
-*/	}
+*/ }
 
 	abort_percent = (double)abort_count_safety / (double)evt_count;
 }
-
 
 // TODO: ?
 void SetState(void *ptr) {
@@ -240,22 +226,19 @@ int GetNeighbours(unsigned int **neighbours) {
 	return count;
 }
 
-
 void InitialPosition(unsigned int region) {
 
 	printf("INFO: agent %d set in region %d\n", current_lp, region);
-	
+
 	// At this time, current_lp holds the current agent that is
 	// being initialized dureing the setup phase.
 	agent_position[current_lp] = region;
 	presence_matrix[region][current_lp] = true;
 }
 
-
 static void process_init_event(void) {
 	unsigned int index;
 	unsigned int agent;
-
 
 	printf("Initializing event manager...\n");
 
@@ -266,22 +249,22 @@ static void process_init_event(void) {
 	printf("Set up regions\n");
 	// Sets up REGIONS
 	current_lvt = 0;
-	for(index = 0; index < region_c; index++) {
+	for (index = 0; index < region_c; index++) {
 		printf("Call application initializer callback for region %d...\n", index);
-//		current_lp = index;
+//              current_lp = index;
 
-//		ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
+//              ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
 
 		// Calls registered callback function to initialize the regions.
 		// Callback function will return the pointer to the initialized region's state
-		states[index] = (*region_initialization)(index);
+		states[index] = (*region_initialization) (index);
 
-		queue_deliver_msgs(); 
+		queue_deliver_msgs();
 	}
 
 	printf("Set up agents\n");
 	// Sets up AGENTS
-	for(agent = 0; agent < agent_c; agent++, index++) {
+	for (agent = 0; agent < agent_c; agent++, index++) {
 		printf("Call application initializer callback for agent %d...\n", agent);
 
 		// Temporary stores the agent's id in order to use it in the InitialPosition function.
@@ -292,9 +275,9 @@ static void process_init_event(void) {
 
 		// Calls registered callback function to initialize the agents.
 		// Callback function will return the pointer to the initialized agent's state
-		states[index] = (*agent_initialization)(agent);
+		states[index] = (*agent_initialization) (agent);
 
-		queue_deliver_msgs(); 
+		queue_deliver_msgs();
 	}
 }
 
@@ -317,10 +300,9 @@ static void process_init_event(void) {
 	process_init_event();
 }*/
 
-
 void init() {
 	printf("Initializing internal structures...\n");
-	
+
 	states = malloc(sizeof(void *) * (region_c + agent_c));
 	can_stop = malloc(sizeof(bool) * region_c);
 
@@ -336,38 +318,32 @@ void init() {
 	process_init_event();
 }
 
-
 bool check_termination(void) {
 	int i;
 
 	bool ret = true;
-	for(i = 0; i < region_c; i++) {
+	for (i = 0; i < region_c; i++) {
 		ret &= can_stop[i];
 	}
 
 	return ret;
 }
 
-
 // API implementation
 void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size) {
 	queue_insert(region, UINT_MAX, UINT_MAX, NULL, environment_update, time, EXECUTION_EnvironmentUpdate, args, size);
-	//printf("INFO: EnvironmentUpdate event queued at time %f\n", time);
 }
 
 void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size) {
 	queue_insert(region, agent, UINT_MAX, environment_interaction, NULL, time, EXECUTION_EnvironmentInteraction, args, size);
-	//printf("INFO: EnvironmentInteraction event queued at time %f\n", time);
 }
 
 void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size) {
 	queue_insert(current_lp, agent_a, agent_b, agent_interaction, NULL, time, EXECUTION_AgentInteraction, args, size);
-	//printf("INFO: AgentInteraction event queued at time %f\n", time);
 }
 
 void Move(unsigned int agent, unsigned int destination, simtime_t time) {
 	queue_insert(destination, agent, UINT_MAX, NULL, NULL, time, EXECUTION_Move, NULL, 0);
-	//printf("INFO: Move event queued at time %f\n", time);
 }
 
 static void move(unsigned int agent, unsigned int destination) {
@@ -375,11 +351,11 @@ static void move(unsigned int agent, unsigned int destination) {
 	unsigned int source;
 
 	/*if (agent < 0 || agent > agent_c)
-		rootsim_error(true, "Agent %d does not exists\n", agent);
+	   rootsim_error(true, "Agent %d does not exists\n", agent);
 
-	if (destination < 0 || destination > region_c)
-		rootsim_error(true, "Region %d does not exists\n", destination);
-*/
+	   if (destination < 0 || destination > region_c)
+	   rootsim_error(true, "Region %d does not exists\n", destination);
+	 */
 	source = agent_position[agent];
 	agent_position[agent] = destination;
 	presence_matrix[destination][agent] = true;
@@ -388,118 +364,122 @@ static void move(unsigned int agent, unsigned int destination) {
 	log_info(NC, "Agent %d moved from %d to %d\n", agent, source, destination);
 }
 
-
 // Main loop
 void thread_loop(unsigned int thread_id) {
 	int type;
 	unsigned int events;
 	revwin *window;
-  
+
 #ifdef FINE_GRAIN_DEBUG
 	unsigned int non_transactional_ex = 0, transactional_ex = 0;
 #endif
-  
+
 	tid = thread_id;
-  
-	while(!stop && !sim_error) {
 
-	if(queue_min() == 0) {
-	  continue;
-	}
+	while (!stop && !sim_error) {
 
-	current_lp = current_msg.receiver_id;
-	current_lvt  = current_msg.timestamp;
-	type = current_msg.type;
+		if (queue_min() == 0) {
+			continue;
+		}
 
-	unsigned int current;
+		current_lp = current_msg.receiver_id;
+		current_lvt = current_msg.timestamp;
+		type = current_msg.type;
 
-	if(check_safety(current_lvt, &events) == 1) {
+		unsigned int current;
 
-		safe++;
-		log_info(CYAN, "Event at time %f is safe\n", current_lvt);
+		if (check_safety(current_lvt, &events) == 1) {
 
-		if(type == EXECUTION_Move) {
-			current = agent_position[current_msg.receiver_id];
-			move(current_msg.entity1, current_msg.receiver_id);
-		} else
-			call_regular_function(&current_msg);
+			safe++;
+			log_info(CYAN, "Event at time %f is safe\n", current_lvt);
 
-		log_info(NC, "Event at time %f has been processed\n", current_lvt);
+			if (type == EXECUTION_Move) {
+				current = agent_position[current_msg.receiver_id];
+				move(current_msg.entity1, current_msg.receiver_id);
+			} else
+				call_regular_function(&current_msg);
 
-	
+			log_info(NC, "Event at time %f has been processed\n", current_lvt);
+
 #ifdef FINE_GRAIN_DEBUG
-	__sync_fetch_and_add(&non_transactional_ex, 1);
+			__sync_fetch_and_add(&non_transactional_ex, 1);
 #endif
-	} else {
+		} else {
 
-	unsafe++;
-	
-	log_info(RED, "Event at time %f is not safe: running in reversible mode\n", current_msg.timestamp);
-	// Create a new revwin to record reverse instructions
-	window = create_new_revwin(0);
-	if(type == EXECUTION_Move) {
-		current = agent_position[current_msg.receiver_id];
-		move(current_msg.entity1, current_msg.receiver_id);
-	} else
-		call_instrumented_function(&current_msg);
+			unsafe++;
 
-	#ifdef THROTTLING
-		throttling(events);
-	#endif
+			log_info(RED, "Event at time %f is not safe: running in reversible mode\n", current_msg.timestamp);
 
-	// Tries to commit actual event until thread finds out that
-	// someone else is waiting for the same region (current_lp)
-	// with a less timestamp. If this is the case, it does a rollback.
-	log_info(NC, "Event %f waits for commit\n", current_msg.timestamp);
-	while(1) {
-		// If some other thread is wating with a less event's timestp,
-		// then run a rollback and exit
-		if(check_waiting() == 1) {
-			log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_msg.timestamp);
+		    reexecute:
 
-			rollbacks++;
-			if(current_msg.type == EXECUTION_Move) {
-				// If the event is a move, than it can be handled entirely here
-				printf("ATTENZIONE IL ROLLBACK DELLA MOVE VA IMPLEMENTATO!\n");
-				move(current_msg.entity1, current);
-				break;
+			// Create a new revwin to record reverse instructions
+			if(window == NULL) {
+				window = create_new_revwin(0);
+			} else {
+				reset_window(window);
 			}
 
-			execute_undo_event(window);
+			if (type == EXECUTION_Move) {
+				current = agent_position[current_msg.receiver_id];
+				move(current_msg.entity1, current_msg.receiver_id);
+			} else
+				call_instrumented_function(&current_msg);
 
-			break;
+#ifdef THROTTLING
+			throttling(events);
+#endif
+
+			// Tries to commit actual event until thread finds out that
+			// someone else is waiting for the same region (current_lp)
+			// with a less timestamp. If this is the case, it does a rollback.
+			log_info(NC, "Event %f waits for commit\n", current_msg.timestamp);
+			while (1) {
+				// If some other thread is wating with a less event's timestp,
+				// then run a rollback and exit
+				if (check_waiting() == 1) {
+					log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_msg.timestamp);
+
+					rollbacks++;
+					if (current_msg.type == EXECUTION_Move) {
+						// If the event is a move, than it can be handled entirely here
+						printf("ATTENZIONE IL ROLLBACK DELLA MOVE VA IMPLEMENTATO!\n");
+						move(current_msg.entity1, current);
+						goto reexecute;
+					}
+
+					execute_undo_event(window);
+
+					goto reexecute;
+				}
+				// If the event is not yet safe continue to retry it safety
+				// hopoing that commit horizion eventually will progress
+				if (check_safety(current_lvt, &events) == 1) {
+					log_info(GREEN, "Event at time %f has became safe: flushing...\n", current_msg.timestamp);
+					break;
+				}
+			}
+
+			// Free current revwin
+			//~free_revwin(window);
+
+			log_info(NC, "Reverse window has been released\n");
 		}
 
-		// If the event is not yet safe continue to retry it safety
-		// hopoing that commit horizion eventually will progress
-		if(check_safety(current_lvt, &events) == 1) {
-			log_info(GREEN, "Event at time %f has became safe: flushing...\n", current_msg.timestamp);
-			break;
-		}
-	}
+		flush();
 
-		// Free current revwin
-		free_revwin(window);
-		
-		log_info(NC, "Reverse window has been released\n");
-	}
+		//      can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
+		//      stop = check_termination();
 
-	flush();
-
-	//	can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
-	//	stop = check_termination();
-
-		#ifdef THROTTLING
-		if((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
+#ifdef THROTTLING
+		if ((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
 			hill_climbing();
-		#endif
+#endif
 
-		if(tid == _MAIN_PROCESS) {
+		if (tid == _MAIN_PROCESS) {
 			evt_count++;
-		if((evt_count - 10000 * (evt_count / 10000)) == 0)
-			printf("TIME: %f\n", current_lvt);
+			if ((evt_count - 100 * (evt_count / 100)) == 0)
+				printf("TIME: %f\n", current_lvt);
 		}
-			
 		//printf("Timestamp %f executed\n", evt.timestamp);
 	}
 
@@ -511,17 +491,13 @@ void thread_loop(unsigned int thread_id) {
 
 #ifdef FINE_GRAIN_DEBUG
 
-	printf("Thread %d executed in non-transactional block: %d\n"
-	"Thread executed in transactional block: %d\n", 
-	tid, non_transactional_ex, transactional_ex);
+	printf("Thread %d executed in non-transactional block: %d\n" "Thread executed in transactional block: %d\n", tid, non_transactional_ex, transactional_ex);
 #endif
 
 }
 
-
-
 void *start_thread(void *args) {
-	int tid = (int) __sync_fetch_and_add(&number_of_threads, 1);
+	int tid = (int)__sync_fetch_and_add(&number_of_threads, 1);
 
 	thread_loop(tid);
 
@@ -530,12 +506,11 @@ void *start_thread(void *args) {
 	pthread_exit(NULL);
 }
 
-
 void StartSimulation(unsigned short int number_of_threads) {
 	pthread_t tid[number_of_threads - 1];
 	int ret, i;
 
-	if(region_c == 0) {
+	if (region_c == 0) {
 		fprintf(stderr, "ERROR: StartSimulation() has been called before Setup(). Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
@@ -549,8 +524,8 @@ void StartSimulation(unsigned short int number_of_threads) {
 	timer_start(simulation_start);
 
 	//Child thread
-	for(i = 0; i < number_of_threads - 1; i++) {
-		if((ret = pthread_create(&tid[i], NULL, start_thread, NULL)) != 0) {
+	for (i = 0; i < number_of_threads - 1; i++) {
+		if ((ret = pthread_create(&tid[i], NULL, start_thread, NULL)) != 0) {
 			fprintf(stderr, "%s\n", strerror(errno));
 			abort();
 		}
@@ -559,7 +534,7 @@ void StartSimulation(unsigned short int number_of_threads) {
 	//Main thread
 	thread_loop(0);
 
-	for(i = 0; i < number_of_threads - 1; i++) {
+	for (i = 0; i < number_of_threads - 1; i++) {
 		pthread_join(tid[i], NULL);
 	}
 
@@ -570,7 +545,6 @@ void StartSimulation(unsigned short int number_of_threads) {
 	printf("======================================\n");
 }
 
-
 void StopSimulation() {
 	stop = true;
 
@@ -579,33 +553,31 @@ void StopSimulation() {
 	timer_start(simulation_stop);
 }
 
-
 void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f region_init) {
 	unsigned int i, j;
 
 	printf("INFO: Setting up simulation platform with %u agents and %u regions...\n", agentc, regionc);
 
-	if(regionc == 0) {
+	if (regionc == 0) {
 		fprintf(stderr, "ERROR: Starting a simulation with no regions. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if(agentc == 0) {
+	if (agentc == 0) {
 		fprintf(stderr, "ERROR: Starting a simulation with no agents. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
-
 	// Initialize the two structure which hold region and agent reciprocal positions
 	// Note: agent_position is initialized with '-1', therefore it is possible to
 	// check whether the application has invoked also the InitialPosition which set it,
 	// otherwise the agent will be simply disposed.
 	agent_position = malloc(sizeof(unsigned int) * agentc);
-	memset(agent_position, -1,  sizeof(unsigned int) * agentc);
+	memset(agent_position, -1, sizeof(unsigned int) * agentc);
 
 	presence_matrix = malloc(sizeof(bool *) * regionc);
-	for(i = 0; i < regionc; i++) {
+	for (i = 0; i < regionc; i++) {
 		presence_matrix[i] = malloc(sizeof(bool) * agentc);
-		for(j = 0; j < agent_c; j++) {
+		for (j = 0; j < agent_c; j++) {
 			//bzero(presence_matrix[i], sizeof(bool) * agentc);
 			presence_matrix[i][j] = false;
 		}
@@ -620,9 +592,9 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 
 	agent_c = agentc;
 	agent_initialization = agent_init;
-	
+
 	// Check whether agents' position has been properly initialized by InitialPosition invocation
-	for(i = 0; i < agent_c; i++) {
+	for (i = 0; i < agent_c; i++) {
 		if (agent_position[i] < 0) {
 			// Agent has no position set up, discard it
 			rootsim_error(false, "Agent %d has no initial position set up; it will be disposed\n");

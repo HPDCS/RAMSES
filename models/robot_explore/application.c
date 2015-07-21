@@ -32,7 +32,7 @@ void *agent_init(unsigned int id) {
 	simtime_t start_time;
 	int index;
 
-	printf("APP :: setup agent %d\n", id);
+//	printf("APP :: setup agent %d\n", id);
 
 	state = malloc(sizeof(agent_state_type));
 	if (state == NULL) {
@@ -87,7 +87,7 @@ void *region_init(unsigned int id) {
 	simtime_t start_time;
 	int i;
 
-	printf("APP :: setup region %d\n", id);
+//	printf("APP :: setup region %d\n", id);
 	
 	state = malloc(sizeof(cell_state_type));
 	if (state == NULL) {
@@ -126,7 +126,7 @@ void *region_init(unsigned int id) {
 void agent_interaction(unsigned int agent_a, unsigned int agent_b, simtime_t now, void *args, size_t size) {
 	// TODO: Da completare con l'inserimento della logica di scambio della mappa?
 	// Al momento è gestita da 'region_interaction'
-	printf("APP :: region_interaction between agent %d and agent %d\n", agent_a, agent_b);
+//	printf("APP :: region_interaction between agent %d and agent %d\n", agent_a, agent_b);
 }
 
 
@@ -277,19 +277,16 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 	step_cell = GetTargetRegion(agent->current_cell, agent->direction);
 	step_time = now + Expent(AGENT_TIME_STEP);
 
-/*	if((signed int)step_cell < 0)
-		printf("APP :: target region cannot be found\n", step_cell);*/
-
 	// Check termination
 	if((double)agent->visited_cells / number_of_regions > .95) {
 		StopSimulation();
 		return;
+	} else {
 	}
 
 	// Perform the movement
 	target = GetRegionState(step_cell);
 
-//	printf("APP :: move action of agent %d from region %d to region %d\n", agent_id, agent->current_cell, step_cell);
 //	printf("APP :: region %d had %d agents and region %d had %d\n", region_id, region->present_agents, step_cell, target->present_agents);
 
 	region->present_agents--;
@@ -319,7 +316,6 @@ void update_region(unsigned int region_id, simtime_t now, void *args, size_t siz
 	simtime_t step_time;
 
 //	printf("APP :: update_region region %d\n", region_id);
-
 	// Compute the new simulation time at which the vent must be scheduled
 	step_time = now + (simtime_t) Expent(REGION_KEEP_ALIVE_INTERVAL);
 
@@ -371,7 +367,7 @@ int main(int argc, char** argv) {
 		number_of_regions = atoi(argv[3]);
 	}
 
-	printf("APP :: main\n");
+//	printf("APP :: main\n");
 
 	// Setup the topology
 	UseTopology(TOPOLOGY_SQUARE);
