@@ -39,7 +39,7 @@ static inline void add_reverse_insn(char *bytes, size_t size) {
 	memcpy(current_revwin->pointer, bytes, size);
 }
 
-static inline initialize_revwin(revwin * w) {
+static inline void initialize_revwin(revwin * w) {
 	char pop = 0x58;
 	char ret = 0xc3;
 
@@ -262,7 +262,7 @@ void *create_new_revwin(size_t size) {
 
 void reset_window(void *w) {
 	revwin *win = (revwin *) w;
-	win->pointer = ((char *)win->address + size);
+	win->pointer = ((char *)win->address + win->size);
 	initialize_revwin(win);
 }
 
