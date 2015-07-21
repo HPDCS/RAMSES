@@ -368,7 +368,7 @@ static void move(unsigned int agent, unsigned int destination) {
 void thread_loop(unsigned int thread_id) {
 	int type;
 	unsigned int events;
-	revwin *window;
+	revwin *window = NULL;
 
 #ifdef FINE_GRAIN_DEBUG
 	unsigned int non_transactional_ex = 0, transactional_ex = 0;

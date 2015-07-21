@@ -11,7 +11,7 @@
 
 #include "reverse.h"
 
-__thread revwin *current_revwin;	//! Pointer to the current reversion window
+__thread revwin *current_win = NULL;
 
 static __thread unsigned int revgen_count;	//! ??
 static __thread addrmap hashmap;	//! Map of the referenced addresses
@@ -22,32 +22,32 @@ static __thread addrmap hashmap;	//! Map of the referenced addresses
  * @param bytes Pointer to the memory region containing the instruction's bytes
  * @param size Instruction's size (in bytes)
  */
-static inline void add_reverse_insn(char *bytes, size_t size) {
+static inline void add_reverse_insn(revwin *win, unsigned char *bytes, size_t size) {
 
 	// since the structure is used as a stack, it is needed to create room for the instruction
-	current_revwin->pointer = (void *)((char *)current_revwin->pointer - size);
+	win->pointer = (void *)((char *)win->pointer - size);
 
-	// printf("=> Attempt to write on the window heap at <%#08lx> (%d bytes)\n", current_revwin->pointer, size);
+	// printf("=> Attempt to write on the window heap at <%#08lx> (%d bytes)\n", win->pointer, size);
 
-	if (current_revwin->pointer < current_revwin->address) {
+	if (win->pointer < win->address) {
 		perror("insufficent reverse window memory heap!");
 		exit(-ENOMEM);
 	}
 	// TODO: add timestamp conditional selector
 
 	// copy the instructions to the heap
-	memcpy(current_revwin->pointer, bytes, size);
+	memcpy(win->pointer, bytes, size);
 }
 
-static inline void initialize_revwin(revwin * w) {
-	char pop = 0x58;
-	char ret = 0xc3;
+static inline void initialize_revwin(revwin *w) {
+	unsigned char pop = 0x58;
+	unsigned char ret = 0xc3;
 
 	bzero(&hashmap.map, sizeof(hashmap.map));
 
 	// Adds the final RET to the base of the window
-	add_reverse_insn(&ret, sizeof(ret));
-	add_reverse_insn(&pop, sizeof(ret));
+	add_reverse_insn(w, &ret, sizeof(ret));
+	add_reverse_insn(w, &pop, sizeof(ret));
 }
 
 /**
@@ -65,24 +65,25 @@ static inline void initialize_revwin(revwin * w) {
  */
 static inline revwin *allocate_reverse_window(size_t size) {
 
-	current_revwin = malloc(sizeof(revwin));
-	if (current_revwin == NULL) {
+	revwin *win = malloc(sizeof(revwin));
+	current_win = win;
+	if (win == NULL) {
 		perror("Out of memroy!");
 		abort();
 	}
 
-	current_revwin->size = size;
-	current_revwin->address = mmap(NULL, size, PROT_WRITE | PROT_EXEC | PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-	current_revwin->pointer = (void *)((char *)current_revwin->address + size - 1);
+	win->size = size;
+	win->address = mmap(NULL, size, PROT_WRITE | PROT_EXEC | PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	win->pointer = (void *)((char *)win->address + size - 1);
 
-	if (current_revwin->address == MAP_FAILED) {
+	if (win->address == MAP_FAILED) {
 		perror("mmap failed");
 		abort();
 	}
 
-	initialize_revwin(current_revwin);
+	initialize_revwin(win);
 
-	return current_revwin;
+	return win;
 }
 
 /**
@@ -101,17 +102,18 @@ static inline revwin *allocate_reverse_window(size_t size) {
  * @param value Tha immediate value has to be emdedded into the instruction
  * @param size The size of the data value emdedded
  */
-static inline void create_reverse_instruction(uint64_t address, uint64_t value, size_t size) {
+static inline void create_reverse_instruction(revwin *w, void *addr, uint64_t value, size_t size) {
 	unsigned char mov[12];		// MOV instruction bytes (at most 9 bytes)
 	unsigned char mov2[12];		// second MOV in case of quadword data
 	unsigned char movabs[10] = {0x48, 0xb8};
 	size_t mov_size;
+	uint64_t address = (uint64_t)addr;
 	
 	uint32_t least_significant_bits;
 
 	// create the MOV to store the destination address movabs $0x11223344aabbccdd,%rax: 48 b8 dd cc bb aa 44 33 22 11
 	memcpy(movabs + 2, &address, 8);
-	add_reverse_insn(movabs, 10);
+	add_reverse_insn(w, movabs, 10);
 
 	// create the new MOV instruction accordingly to the data size
 	mov[0] = (uint64_t) 0;
@@ -171,12 +173,12 @@ static inline void create_reverse_instruction(uint64_t address, uint64_t value, 
 
 	// now 'mov' contains the bytes that represents the reverse MOV
 	// hence it has to be written on the heap reverse window
-	add_reverse_insn(mov, mov_size);
+	add_reverse_insn(w, mov, mov_size);
 	if (size == 8) {
 		address += 4;
 		memcpy(movabs + 2, &address, 8);
-		add_reverse_insn(movabs, 10);
-		add_reverse_insn(mov2, mov_size);
+		add_reverse_insn(w, movabs, 10);
+		add_reverse_insn(w, mov2, mov_size);
 	}
 }
 
@@ -256,12 +258,12 @@ void reverse_code_generator(void *address, unsigned int size) {
 	// now the idea is to generate the reverse MOV instruction that will
 	// restore the previous value 'value' stored in the memory address
 	// based on the operand size selects the proper MOV instruction bytes
-	create_reverse_instruction(address, value, size);
+	create_reverse_instruction(current_win, address, value, size);
 }
 
 void *create_new_revwin(size_t size) {
-	current_revwin = allocate_reverse_window(size > 0 ? size : REVERSE_WIN_SIZE);
-	return current_revwin;
+	revwin *win = allocate_reverse_window(size > 0 ? size : REVERSE_WIN_SIZE);
+	return win;
 }
 
 void reset_window(void *w) {
@@ -278,6 +280,7 @@ void free_revwin(void *w) {
 
 	munmap(win->address, win->size);
 	free(win);
+	current_win = NULL;
 }
 
 void execute_undo_event(void *w) {
@@ -285,7 +288,7 @@ void execute_undo_event(void *w) {
 	revwin *win = (revwin *) w;
 	void *revcode;
 
-	add_reverse_insn(&push, 1);
+	add_reverse_insn(w, &push, 1);
 
 	revcode = win->pointer;
 	((void (*)(void))revcode) ();
