@@ -159,7 +159,7 @@ static inline void create_reverse_instruction(uint64_t address, uint64_t value, 
 		memcpy(mov + 3, &least_significant_bits, 4);
 		
 		// second part
-		least_significant_bits = (value >> 32) & ~(((0x1 << (sizeof(uint64_t) * 8) ) >> 32) << 1)
+		least_significant_bits = (value >> 32) & 0x0000FFFF;
 		memcpy(mov2 + 3, &least_significant_bits, 4);
 		mov_size = 7;
 		break;
