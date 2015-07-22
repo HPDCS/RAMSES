@@ -3,7 +3,7 @@
 
 #include <sys/types.h>
 
-#define REVERSE_WIN_SIZE 1024 * 1024 * 10	//! Defalut size of the reverse window which will contain the reverse code
+#define REVERSE_WIN_SIZE 1024 * 1024 * 50	//! Defalut size of the reverse window which will contain the reverse code
 #define HMAP_SIZE		32768				//! Default size ot the address hash map to handle colliding mov addresses
 
 #define HMAP_INDEX_MASK		0xffffffc0		//! Most significant 10 bits are used to index quad-word which contains address bit

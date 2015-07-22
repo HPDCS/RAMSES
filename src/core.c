@@ -362,7 +362,7 @@ static void move(unsigned int agent, unsigned int destination) {
 void thread_loop(unsigned int thread_id) {
 	int type;
 	unsigned int events;
-	revwin *window;
+	revwin *window = NULL;
 	msg_t *current_m;
 	unsigned int current;
 	
