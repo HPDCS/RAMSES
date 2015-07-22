@@ -23,7 +23,7 @@ double queue_pre_min(void);
 
 void queue_register_thread(void);
 
-int queue_min(void);
+msg_t *queue_min(void);
 
 int queue_pending_message_size(void);
 

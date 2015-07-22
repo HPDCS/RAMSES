@@ -350,12 +350,6 @@ static void move(unsigned int agent, unsigned int destination) {
 	// TODO: !!! in caso di rollback non funziona nulla !!!
 	unsigned int source;
 
-	/*if (agent < 0 || agent > agent_c)
-	   rootsim_error(true, "Agent %d does not exists\n", agent);
-
-	   if (destination < 0 || destination > region_c)
-	   rootsim_error(true, "Region %d does not exists\n", destination);
-	 */
 	source = agent_position[agent];
 	agent_position[agent] = destination;
 	presence_matrix[destination][agent] = true;
@@ -369,24 +363,31 @@ void thread_loop(unsigned int thread_id) {
 	int type;
 	unsigned int events;
 	revwin *window;
+	msg_t *current_m;
+	unsigned int current;
+	
+	reset_thread_pool();
 
 #ifdef FINE_GRAIN_DEBUG
 	unsigned int non_transactional_ex = 0, transactional_ex = 0;
 #endif
 
 	tid = thread_id;
+	
+	window = create_new_revwin(0);
 
 	while (!stop && !sim_error) {
 
-		if (queue_min() == 0) {
+		current_m = queue_min();
+		if(current_m == NULL) {
 			continue;
 		}
 
-		current_lp = current_msg.receiver_id;
-		current_lvt = current_msg.timestamp;
-		type = current_msg.type;
-
-		unsigned int current;
+		current_lp = current_m->receiver_id;
+		current_lvt = current_m->timestamp;
+		type = current_m->type;
+		
+ reexecute:
 
 		if (check_safety(current_lvt, &events) == 1) {
 
@@ -394,10 +395,10 @@ void thread_loop(unsigned int thread_id) {
 			log_info(CYAN, "Event at time %f is safe\n", current_lvt);
 
 			if (type == EXECUTION_Move) {
-				current = agent_position[current_msg.receiver_id];
-				move(current_msg.entity1, current_msg.receiver_id);
+				current = agent_position[current_m->receiver_id];
+				move(current_msg.entity1, current_m->receiver_id);
 			} else
-				call_regular_function(&current_msg);
+				call_regular_function(current_m);
 
 			log_info(NC, "Event at time %f has been processed\n", current_lvt);
 
@@ -410,20 +411,15 @@ void thread_loop(unsigned int thread_id) {
 
 			log_info(RED, "Event at time %f is not safe: running in reversible mode\n", current_msg.timestamp);
 
-		    reexecute:
-
-			// Create a new revwin to record reverse instructions
-			if(window == NULL) {
-				window = create_new_revwin(0);
-			} else {
-				reset_window(window);
-			}
+			// Reset the reverse window
+			reset_window(window);
 
 			if (type == EXECUTION_Move) {
-				current = agent_position[current_msg.receiver_id];
-				move(current_msg.entity1, current_msg.receiver_id);
-			} else
-				call_instrumented_function(&current_msg);
+				current = agent_position[current_m->receiver_id];
+				move(current_msg.entity1, current_m->receiver_id);
+			} else {
+				call_instrumented_function(current_m);
+			}
 
 #ifdef THROTTLING
 			throttling(events);
@@ -433,6 +429,7 @@ void thread_loop(unsigned int thread_id) {
 			// someone else is waiting for the same region (current_lp)
 			// with a less timestamp. If this is the case, it does a rollback.
 			log_info(NC, "Event %f waits for commit\n", current_msg.timestamp);
+			
 			while (1) {
 				// If some other thread is wating with a less event's timestp,
 				// then run a rollback and exit
@@ -440,10 +437,10 @@ void thread_loop(unsigned int thread_id) {
 					log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_msg.timestamp);
 
 					rollbacks++;
-					if (current_msg.type == EXECUTION_Move) {
+					if (current_m->type == EXECUTION_Move) {
 						// If the event is a move, than it can be handled entirely here
 						printf("ATTENZIONE IL ROLLBACK DELLA MOVE VA IMPLEMENTATO!\n");
-						move(current_msg.entity1, current);
+						move(current_m->entity1, current);
 						goto reexecute;
 					}
 
@@ -452,15 +449,12 @@ void thread_loop(unsigned int thread_id) {
 					goto reexecute;
 				}
 				// If the event is not yet safe continue to retry it safety
-				// hopoing that commit horizion eventually will progress
+				// hoping that commit horizion eventually will progress
 				if (check_safety(current_lvt, &events) == 1) {
 					log_info(GREEN, "Event at time %f has became safe: flushing...\n", current_msg.timestamp);
 					break;
 				}
 			}
-
-			// Free current revwin
-			//~free_revwin(window);
 
 			log_info(NC, "Reverse window has been released\n");
 		}
@@ -480,7 +474,6 @@ void thread_loop(unsigned int thread_id) {
 			if ((evt_count - 100 * (evt_count / 100)) == 0)
 				printf("TIME: %f\n", current_lvt);
 		}
-		//printf("Timestamp %f executed\n", evt.timestamp);
 	}
 
 	// This thread is exiting, therefore it has to come out
