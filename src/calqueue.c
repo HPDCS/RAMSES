@@ -278,15 +278,16 @@ void calqueue_put(double timestamp, void *payload) {
 	// Update queue size
 	qsize++;
 
-	// Double the calendar size if needed
-	if (qsize > top_threshold && nbuckets < MAXNBUCKETS) {
-		resize(2 * nbuckets);
-	}
-
+	// Check whether we're adding something before lastprio
 	if (timestamp < lastprio) {
 		lastprio = timestamp;
 		lastbucket = i;
 		buckettop = (double)(i + 1) * cwidth + 0.5 * cwidth;
+	}
+
+	// Double the calendar size if needed
+	if (qsize > top_threshold && nbuckets < MAXNBUCKETS) {
+		resize(2 * nbuckets);
 	}
 }
 
