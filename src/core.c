@@ -254,8 +254,6 @@ static void process_init_event(void) {
 		printf("Call application initializer callback for region %d...\n", index);
 //              current_lp = index;
 
-//              ProcessEvent(current_lp, current_lvt, INIT, NULL, 0, states[current_lp]);
-
 		// Calls registered callback function to initialize the regions.
 		// Callback function will return the pointer to the initialized region's state
 		states[index] = (*region_initialization) (index);
@@ -311,12 +309,12 @@ void init(void) {
 	dymelor_init();
 #endif
 
-	queue_init();
 	message_state_init();
+	queue_init();
 	numerical_init();
 
 	//  queue_register_thread();
-	process_init_event();
+	//process_init_event();
 }
 
 bool check_termination(void) {
@@ -375,6 +373,7 @@ void thread_loop(void) {
 	while (!stop && !sim_error) {
 
 		current_m = queue_min();
+
 		if (current_m == NULL) {
 			continue;
 		}
@@ -512,7 +511,6 @@ void StartSimulation(unsigned short int app_n_thr) {
 	printf("INFO: Simulation is starting (%d threads)...\n\n", app_n_thr);
 
 	n_cores = app_n_thr;
-	init();
 
 	// Start timer
 	timer_start(simulation_start);
@@ -561,6 +559,8 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 		fprintf(stderr, "ERROR: Starting a simulation with no agents. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
+
+
 	// Initialize the two structure which hold region and agent reciprocal positions
 	// Note: agent_position is initialized with '-1', therefore it is possible to
 	// check whether the application has invoked also the InitialPosition which set it,
@@ -579,15 +579,15 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 		}
 	}
 
-	printf("INFO: Setting up regions and agents...\n");
-
-	// Once the structres have been properly initialized it calls the setup function
-	// provided as callback by the application
 	region_c = regionc;
-	region_initialization = region_init;
-
 	agent_c = agentc;
+	region_initialization = region_init;
 	agent_initialization = agent_init;
+
+	init();
+	process_init_event();
+
+	printf("INFO: Setting up regions and agents...\n");
 
 	// Check whether agents' position has been properly initialized by InitialPosition invocation
 	for (i = 0; i < agent_c; i++) {
@@ -597,4 +597,5 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 			states[i] = NULL;	// TODO: da stabilire come procedere
 		}
 	}
+
 }

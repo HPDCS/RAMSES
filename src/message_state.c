@@ -9,7 +9,7 @@ simtime_t *current_time_vector;
 //static simtime_t *outgoing_time_vector;
 static simtime_t *waiting_time_vector;
 static simtime_t *waiting_time_who;
-static int *waiting_time_lock;
+int *waiting_time_lock;
 
 extern int queue_lock;
 
@@ -61,7 +61,7 @@ void execution_time(msg_t * msg) {
 			waiting_time_who[region] = tid;
 		}
 
-		__sync_lock_release(&waiting_time_lock);
+		__sync_lock_release(&waiting_time_lock[region]);
 
 		// Spins over the region_lock until the current event time is grater
 		// than the waiting one
@@ -149,7 +149,7 @@ void flush(msg_t * msg) {
 	waiting_time_vector[region] = INFTY;
 	waiting_time_who[region] = n_cores;
 
-	__sync_lock_release(&waiting_time_lock);
+	__sync_lock_release(&waiting_time_lock[region]);
 
 //      log_info(NC, "Vector status: outgoing=%f\n", t_min);
 
