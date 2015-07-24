@@ -129,10 +129,11 @@ msg_t *queue_min(void) {
 
 	// Gets the minimum timestamp event from the queue
 	while (__sync_lock_test_and_set(&queue_lock, 1))
-		while (queue_lock) ;
+		while (queue_lock);
 
 	node_ret = calqueue_get();
 	if (node_ret == NULL) {
+		printf("NULL\n"); abort();
 		current_time_vector[tid] = INFTY;
 		__sync_lock_release(&queue_lock);
 		return NULL;

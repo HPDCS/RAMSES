@@ -309,7 +309,6 @@ void init(void) {
 	dymelor_init();
 #endif
 
-	message_state_init();
 	queue_init();
 	numerical_init();
 
@@ -508,20 +507,29 @@ void StartSimulation(unsigned short int app_n_thr) {
 		exit(EXIT_FAILURE);
 	}
 
+	if(app_n_thr < 1) {
+		fprintf(stderr, "ERROR: calling StartSimulation with less than 1 thread. Aborting...\n");
+		exit(EXIT_FAILURE);
+	}
+
 	printf("INFO: Simulation is starting (%d threads)...\n\n", app_n_thr);
 
 	n_cores = app_n_thr;
+	message_state_init();
 
 	// Start timer
 	timer_start(simulation_start);
 
 	//Child thread
+	printf("Starting slave threads... ");
 	for (i = 0; i < app_n_thr - 1; i++) {
 		if ((ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0) {
 			fprintf(stderr, "%s\n", strerror(errno));
 			abort();
 		}
+		printf("%d ", i+1);
 	}
+	printf("done\n");
 
 	//Main thread
 	thread_loop();
