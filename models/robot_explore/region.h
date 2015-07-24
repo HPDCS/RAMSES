@@ -18,7 +18,6 @@
  */
 unsigned int get_target_id(unsigned int region_id, unsigned int direction);
 
-
 /**
  * Tells whether the passed region <em>neighbour</em> can be reached
  * from the region <em>region</em>.
@@ -27,10 +26,10 @@ unsigned int get_target_id(unsigned int region_id, unsigned int direction);
  * @param neighbour Region's id of the neighbour we want to compute reachability
  * @return True if the <em>neighbour</em> can be reached from <em>region</em>, false otherwise
  */
-bool is_reachable(cell_state_type *region, unsigned int direction);
+bool is_reachable(cell_state_type * region, unsigned int direction);
 
 unsigned int map_hexagon_to_linear(unsigned int x, unsigned int y);
 
 void map_linear_to_hexagon(unsigned int linear, unsigned int *x, unsigned int *y);
 
-#endif // _REGION_H
+#endif				// _REGION_H

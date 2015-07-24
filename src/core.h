@@ -3,16 +3,14 @@
 
 #include <ABM.h>
 
-
 #include <stdbool.h>
 #include <math.h>
 #include <float.h>
 
-
 #define MAX_LPs	4096
 
 #define MAX_DATA_SIZE		16
-#define THR_POOL_SIZE		3
+#define THR_POOL_SIZE		100
 
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
 
@@ -23,7 +21,6 @@
 #define EXECUTION_Move				4
 
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
-
 
 #define GREEN "\033[0;32m"
 #define RED "\033[0;31m"
@@ -39,10 +36,10 @@
 	fflush(stdout);\
 	} while(0);
 
-//#define log_info(color, ...) do_log_info(color, __VA_ARGS__)
-#define log_info(color, ...) {}
+#define log_info(color, ...) do_log_info(color, __VA_ARGS__)
+//#define log_info(color, ...) {}
 
-typedef struct __msg_t {  
+typedef struct __msg_t {
 	unsigned int sender_id;
 	unsigned int receiver_id;
 	simtime_t timestamp;
@@ -51,10 +48,9 @@ typedef struct __msg_t {
 	int entity2;
 	interaction_f interaction;
 	update_f update;
-	unsigned int data_size;  
+	unsigned int data_size;
 	unsigned char data[MAX_DATA_SIZE];
 } msg_t;
-
 
 extern __thread simtime_t current_lvt;
 extern __thread unsigned int current_lp;
@@ -64,15 +60,13 @@ extern unsigned int agent_c;
 extern unsigned int region_c;
 
 extern unsigned int *agent_position;
-extern bool **presence_matrix; // Rows are cells, columns are agents;
-
+extern bool **presence_matrix;	// Rows are cells, columns are agents;
 
 /* Total number of cores required for simulation */
 extern unsigned int n_cores;
 
-
 //Esegue il loop del singolo thread
-void thread_loop(unsigned int thread_id);
+void thread_loop(void);
 
 extern void rootsim_error(bool fatal, const char *msg, ...);
 
@@ -80,7 +74,5 @@ extern void _mkdir(const char *path);
 
 /*extern int OnGVT(unsigned int me, void *snapshot);
 extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);*/
-
-extern void flush(void);
 
 #endif

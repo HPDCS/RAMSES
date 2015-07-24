@@ -8,13 +8,11 @@
 #include <float.h>
 #include <stdbool.h>
 
-
 #ifdef INIT
- #undef INIT
+#undef INIT
 #endif
 /// This is the message code which is sent by the simulation kernel upon startup
 #define INIT	0
-
 
 /// This macro can be used to convert command line parameters to integers
 #define parseInt(s) ({\
@@ -27,7 +25,6 @@
 			__value;\
 		     })
 
-
 /// This macro can be used to convert command line parameters to doubles
 #define parseDouble(s) ({\
 			double __value;\
@@ -38,7 +35,6 @@
 			}\
 			__value;\
 		       })
-
 
 /// This macro can be used to convert command line parameters to floats
 #define parseFloat(s) ({\
@@ -51,7 +47,6 @@
 			__value;\
 		       })
 
-
 /// This macro can be used to convert command line parameters to booleans
 #define parseBoolean(s) ({\
 			bool __value;\
@@ -63,13 +58,11 @@
 			__value;\
 		       })
 
-
 /// This defines the type with whom timestamps are represented
 typedef double simtime_t;
 
 /// Infinite timestamp: this is the highest timestamp in a simulation run
 #define INFTY DBL_MAX
-
 
 // Topology library
 #define TOPOLOGY_HEXAGON	1000
@@ -82,8 +75,6 @@ typedef double simtime_t;
 
 extern void SetupGraph(const char *graph_file);
 
-
-
 // Expose to the application level the rollbackable numerical library
 double Random(void);
 int RandomRange(int min, int max);
@@ -94,12 +85,10 @@ double Gamma(int ia);
 double Poisson(void);
 int Zipf(double skew, int limit);
 
-
 /* FUNCTIONS TYPEDEFS */
-typedef void *(*init_f)(unsigned int id);
-typedef void (*interaction_f)(unsigned int a, unsigned int b, simtime_t now, void *args, size_t size);
-typedef void (*update_f)(unsigned int r, simtime_t now, void *args, size_t size);
-
+typedef void *(*init_f) (unsigned int id);
+typedef void (*interaction_f) (unsigned int a, unsigned int b, simtime_t now, void *args, size_t size);
+typedef void (*update_f) (unsigned int r, simtime_t now, void *args, size_t size);
 
 /* CORE API */
 
@@ -127,7 +116,7 @@ extern void InitialPosition(unsigned int region);
  */
 extern void StartSimulation(unsigned short int n_threads);
 extern void Move(unsigned int agent, unsigned int destination, simtime_t time);
-extern void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size); 
+extern void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size);
 extern void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size);
 extern void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size);
 
@@ -174,6 +163,4 @@ extern unsigned int FindRegion(int topology);
  */
 extern unsigned int GetTargetRegion(unsigned int region_id, unsigned int direction);
 
-
-#endif /* __ABM_H */
-
+#endif				/* __ABM_H */

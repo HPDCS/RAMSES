@@ -2,7 +2,6 @@
 #include "agent.h"
 #include "region.h"
 
-
 /**
  * Computes the diff between first and second visit map; therefore
  * it exchanges the computed differences among the two agents.
@@ -10,7 +9,7 @@
  * @param agent_a Pointer to the first agent's state
  * @param agent_b Pointer to the second agent's state
  */
- void map_diff_exchange(agent_state_type *agent_a, agent_state_type *agent_b) {
+void map_diff_exchange(agent_state_type * agent_a, agent_state_type * agent_b) {
 	unsigned int index;
 	unsigned char *map_a;
 	unsigned char *map_b;
@@ -67,55 +66,53 @@
 	}
 }*/
 
-
-void dump_agent_knowledge(agent_state_type *agent) {
+void dump_agent_knowledge(agent_state_type * agent) {
 	int index;
-	
+
 	for (index = 0; index < number_of_regions; index++) {
 		printf("%#3d ", index);
 	}
 	printf("\n");
-	
+
 	for (index = 0; index < number_of_regions; index++) {
 		printf("%#3d ", BITMAP_CHECK_BIT(agent->visit_map, index) >> (index % 8));
 	}
 	printf("\tVisited %d regions\n", agent->visited_cells);
 }
 
-
-void dump_a_star_map(agent_state_type *agent) {
+void dump_a_star_map(agent_state_type * agent) {
 	int index;
 
 	for (index = 0; index < number_of_regions; index++) {
 		printf("%#3d ", index);
 	}
 	printf("\n");
-	
+
 	for (index = 0; index < number_of_regions; index++) {
 		printf("%#3d ", BITMAP_CHECK_BIT(agent->a_star_map, index) >> (index % 8));
 	}
 	printf("\n");
 }
 
-void hexdump (void *addr, int len) {
+void hexdump(void *addr, int len) {
 	int i;
 	int count;
 	unsigned char buff[17];
-	unsigned char *pc = (unsigned char*)addr;
+	unsigned char *pc = (unsigned char *)addr;
 
-	if(len <= 0) {
+	if (len <= 0) {
 		return;
 	}
 
-	printf ("       Address                     Hexadecimal values                      Printable\n" );
-	printf ("   ----------------  ------------------------------------------------  ------------------\n" );
+	printf("       Address                     Hexadecimal values                      Printable\n");
+	printf("   ----------------  ------------------------------------------------  ------------------\n");
 
 	// Process every byte in the data.
-	count = (((int) (len / 16) + 1) * 16);
+	count = (((int)(len / 16) + 1) * 16);
 	for (i = 0; i < count; i++) {
 
 		// Multiple of 8 means mid-line (add a mid-space)
-		if((i % 8) == 0) {
+		if ((i % 8) == 0) {
 			if (i != 0)
 				printf(" ");
 		}
@@ -125,14 +122,13 @@ void hexdump (void *addr, int len) {
 			if ((i % 16) == 0) {
 				// Just don't print ASCII for the zeroth line.
 				if (i != 0)
-					printf (" |%s|\n", buff);
+					printf(" |%s|\n", buff);
 
 				// Output the offset.
-				printf ("   (%5d) %08x ", i, i);
+				printf("   (%5d) %08x ", i, i);
 			}
-
 			// Now the hex code for the specific character.
-			printf (" %02x", pc[i]);
+			printf(" %02x", pc[i]);
 
 			// And store a printable ASCII character for later.
 			if ((pc[i] < 0x20) || (pc[i] > 0x7e))
@@ -141,7 +137,6 @@ void hexdump (void *addr, int len) {
 				buff[i % 16] = pc[i];
 			buff[(i % 16) + 1] = '\0';
 		}
-
 		// Pad out last line if not exactly 16 characters.
 		else {
 			printf("   ");
@@ -151,5 +146,5 @@ void hexdump (void *addr, int len) {
 	}
 
 	// And print the final ASCII bit.
-	printf ("  |%s|\n", buff);
+	printf("  |%s|\n", buff);
 }

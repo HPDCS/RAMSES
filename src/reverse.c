@@ -22,7 +22,7 @@ static __thread addrmap hashmap;	//! Map of the referenced addresses
  * @param bytes Pointer to the memory region containing the instruction's bytes
  * @param size Instruction's size (in bytes)
  */
-static inline void add_reverse_insn(revwin *win, unsigned char *bytes, size_t size) {
+static inline void add_reverse_insn(revwin * win, unsigned char *bytes, size_t size) {
 
 	// since the structure is used as a stack, it is needed to create room for the instruction
 	win->pointer = (void *)((char *)win->pointer - size);
@@ -39,7 +39,7 @@ static inline void add_reverse_insn(revwin *win, unsigned char *bytes, size_t si
 	memcpy(win->pointer, bytes, size);
 }
 
-static inline void initialize_revwin(revwin *w) {
+static inline void initialize_revwin(revwin * w) {
 	unsigned char pop = 0x58;
 	unsigned char ret = 0xc3;
 
@@ -102,13 +102,13 @@ static inline revwin *allocate_reverse_window(size_t size) {
  * @param value Tha immediate value has to be emdedded into the instruction
  * @param size The size of the data value emdedded
  */
-static inline void create_reverse_instruction(revwin *w, void *addr, uint64_t value, size_t size) {
-	unsigned char mov[12];		// MOV instruction bytes (at most 9 bytes)
-	unsigned char mov2[12];		// second MOV in case of quadword data
-	unsigned char movabs[10] = {0x48, 0xb8};
+static inline void create_reverse_instruction(revwin * w, void *addr, uint64_t value, size_t size) {
+	unsigned char mov[12];	// MOV instruction bytes (at most 9 bytes)
+	unsigned char mov2[12];	// second MOV in case of quadword data
+	unsigned char movabs[10] = { 0x48, 0xb8 };
 	size_t mov_size;
-	uint64_t address = (uint64_t)addr;
-	
+	uint64_t address = (uint64_t) addr;
+
 	uint32_t least_significant_bits;
 
 	// create the MOV to store the destination address movabs $0x11223344aabbccdd,%rax: 48 b8 dd cc bb aa 44 33 22 11
@@ -154,12 +154,12 @@ static inline void create_reverse_instruction(revwin *w, void *addr, uint64_t va
 		mov[0] = mov2[0] = 0x48;
 		mov[1] = mov2[1] = 0xc7;
 		mov[2] = mov2[2] = 0x00;
-		
-		least_significant_bits = (uint32_t)value;
-		
+
+		least_significant_bits = (uint32_t) value;
+
 		//mov[4] = (uint32_t) value;
 		memcpy(mov + 3, &least_significant_bits, 4);
-		
+
 		// second part
 		least_significant_bits = (value >> 32) & 0x0000FFFF;
 		memcpy(mov2 + 3, &least_significant_bits, 4);
@@ -267,7 +267,7 @@ void *create_new_revwin(size_t size) {
 }
 
 void reset_window(void *w) {
-	revwin *win = (revwin *)w;
+	revwin *win = (revwin *) w;
 	win->pointer = ((char *)win->address + win->size);
 	initialize_revwin(win);
 }

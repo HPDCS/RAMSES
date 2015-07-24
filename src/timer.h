@@ -8,7 +8,6 @@
 /* gettimeofday() timers  - TODO: SHOULD BE DEPRECATED */
 typedef struct timeval timer;
 
-
 #define timer_start(timer_name) gettimeofday(&timer_name, NULL)
 
 #define timer_restart(timer_name) gettimeofday(&timer_name, NULL)
@@ -44,10 +43,6 @@ typedef struct timeval timer;
 					strftime(string, sizeof string, "%Y-%m-%d %H:%M:%S", __nowtm);\
 				} while(0)
 
-
-
-
-
 /// This overflows if the machine is not restarted in about 50-100 years (on 64 bits archs)
 #define CLOCK_READ() ({ \
 			unsigned int lo; \
@@ -56,5 +51,4 @@ typedef struct timeval timer;
 			((unsigned long long)hi) << 32 | lo; \
 			})
 
-#endif /* _TIMER_H */
-
+#endif				/* _TIMER_H */
