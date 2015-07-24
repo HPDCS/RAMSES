@@ -22,6 +22,7 @@
 #include "queue.h"
 #include "message_state.h"
 #include "simtypes.h"
+#include "function_map.h"
 
 #include "reverse.h"
 
@@ -300,7 +301,7 @@ static void process_init_event(void) {
 	process_init_event();
 }*/
 
-void init() {
+void init(void) {
 	printf("Initializing internal structures...\n");
 
 	states = malloc(sizeof(void *) * (region_c + agent_c));
@@ -319,7 +320,7 @@ void init() {
 }
 
 bool check_termination(void) {
-	int i;
+	unsigned int i;
 
 	bool ret = true;
 	for (i = 0; i < region_c; i++) {
@@ -359,21 +360,16 @@ static void move(unsigned int agent, unsigned int destination) {
 }
 
 // Main loop
-void thread_loop(unsigned int thread_id) {
+void thread_loop(void) {
 	int type;
-	unsigned int events;
 	revwin *window = NULL;
 	msg_t *current_m;
 	unsigned int current;
 	
-	reset_thread_pool();
-
 #ifdef FINE_GRAIN_DEBUG
 	unsigned int non_transactional_ex = 0, transactional_ex = 0;
 #endif
 
-	tid = thread_id;
-	
 	window = create_new_revwin(0);
 
 	while (!stop && !sim_error) {
@@ -389,7 +385,7 @@ void thread_loop(unsigned int thread_id) {
 		
  reexecute:
 
-		if (check_safety(current_lvt, &events) == 1) {
+		if (check_safety(current_lvt) == 1) {
 
 			safe++;
 			log_info(CYAN, "Event at time %f is safe\n", current_lvt);
@@ -433,13 +429,13 @@ void thread_loop(unsigned int thread_id) {
 			while (1) {
 				// If the event is not yet safe continue to retry it safety
 				// hoping that commit horizion eventually will progress
-				if (check_safety(current_lvt, &events) == 1) {
+				if (check_safety(current_lvt) == 1) {
 					log_info(GREEN, "Event at time %f has became safe: flushing...\n", current_msg.timestamp);
 					break;
 				} else {
 					// If some other thread is wating with a less event's timestp,
 				// then run a rollback and exit
-					if (check_waiting() == 1) {
+					if (check_waiting(current_msg.timestamp) == 1) {
 						log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_msg.timestamp);
 
 						rollbacks++;
@@ -496,17 +492,20 @@ void thread_loop(unsigned int thread_id) {
 }
 
 void *start_thread(void *args) {
-	int tid = (int)__sync_fetch_and_add(&number_of_threads, 1);
+	(void)args;
 
-	thread_loop(tid);
+	tid = (int)__sync_fetch_and_add(&number_of_threads, 1);
+
+	thread_loop();
 
 	printf("Thread %d exited\n", tid);
 
 	pthread_exit(NULL);
 }
 
-void StartSimulation(unsigned short int number_of_threads) {
-	pthread_t tid[number_of_threads - 1];
+void StartSimulation(unsigned short int app_n_thr) {
+
+	pthread_t p_tid[app_n_thr - 1];
 	int ret, i;
 
 	if (region_c == 0) {
@@ -514,37 +513,37 @@ void StartSimulation(unsigned short int number_of_threads) {
 		exit(EXIT_FAILURE);
 	}
 
-	printf("INFO: Simulation is starting (%d threads)...\n\n", number_of_threads);
+	printf("INFO: Simulation is starting (%d threads)...\n\n", app_n_thr);
 
-	n_cores = number_of_threads;
+	n_cores = app_n_thr;
 	init();
 
 	// Start timer
 	timer_start(simulation_start);
 
 	//Child thread
-	for (i = 0; i < number_of_threads - 1; i++) {
-		if ((ret = pthread_create(&tid[i], NULL, start_thread, NULL)) != 0) {
+	for (i = 0; i < app_n_thr - 1; i++) {
+		if ((ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0) {
 			fprintf(stderr, "%s\n", strerror(errno));
 			abort();
 		}
 	}
 
 	//Main thread
-	thread_loop(0);
+	thread_loop();
 
-	for (i = 0; i < number_of_threads - 1; i++) {
-		pthread_join(tid[i], NULL);
+	for (i = 0; i < app_n_thr - 1; i++) {
+		pthread_join(p_tid[i], NULL);
 	}
 
 	printf("======================================\n");
 	printf("Simulation finished\n");
-	printf("Overall time elapsed: %d msec\n", timer_diff_micro(simulation_start, simulation_stop) / 1000);
+	printf("Overall time elapsed: %ld msec\n", timer_diff_micro(simulation_start, simulation_stop) / 1000);
 	printf("%d Safe events\n%d Unsafe event\n%d Rolled back events\n", safe, unsafe, rollbacks);
 	printf("======================================\n");
 }
 
-void StopSimulation() {
+void StopSimulation(void) {
 	stop = true;
 
 	printf("INFO: Request to STOP Simulation\n");
@@ -566,12 +565,15 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 		fprintf(stderr, "ERROR: Starting a simulation with no agents. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
+
 	// Initialize the two structure which hold region and agent reciprocal positions
 	// Note: agent_position is initialized with '-1', therefore it is possible to
 	// check whether the application has invoked also the InitialPosition which set it,
 	// otherwise the agent will be simply disposed.
 	agent_position = malloc(sizeof(unsigned int) * agentc);
-	memset(agent_position, -1, sizeof(unsigned int) * agentc);
+	for(i = 0; i < agentc; i++) {
+		agent_position[i] = UINT_MAX;
+	}
 
 	presence_matrix = malloc(sizeof(bool *) * regionc);
 	for (i = 0; i < regionc; i++) {
@@ -594,7 +596,7 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 
 	// Check whether agents' position has been properly initialized by InitialPosition invocation
 	for (i = 0; i < agent_c; i++) {
-		if (agent_position[i] < 0) {
+		if (agent_position[i] == UINT_MAX) {
 			// Agent has no position set up, discard it
 			rootsim_error(false, "Agent %d has no initial position set up; it will be disposed\n");
 			states[i] = NULL;	// TODO: da stabilire come procedere

@@ -72,7 +72,7 @@ extern unsigned int n_cores;
 
 
 //Esegue il loop del singolo thread
-void thread_loop(unsigned int thread_id);
+void thread_loop(void);
 
 extern void rootsim_error(bool fatal, const char *msg, ...);
 

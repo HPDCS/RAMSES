@@ -12,7 +12,6 @@ static simtime_t *waiting_time_who;
 static int *waiting_time_lock;
 
 extern int queue_lock;
-extern int *region_lock;
 
 void message_state_init(void) {
 	unsigned int i;
@@ -35,7 +34,6 @@ void message_state_init(void) {
 void execution_time(simtime_t time) {
 	unsigned int region;
 	simtime_t waiting_time;
-	bool retry;
 
 	// Gets the lock on the region
 	region = current_msg.receiver_id;
@@ -56,9 +54,6 @@ void execution_time(simtime_t time) {
 		waiting_time = waiting_time_vector[region];
 
 		if (time < waiting_time) {
-
-			// Register the current event's timestamp in the waiting queue via CAS
-			simtime_t tmp;
 
 			waiting_time_vector[region] = time;
 			waiting_time_who[region] = tid;
@@ -91,13 +86,9 @@ void commit_time(void) {
 	current_time_vector[tid] = INFTY;
 }
 
-int check_safety(simtime_t time, unsigned int *events) {
-	int i;
-	unsigned int min_tid = n_cores + 1;
-	double min = INFTY;
-	int ret = 0;
+int check_safety(simtime_t time) {
+	unsigned int i;
 
-	*events = 0;
 
 	//  while(__sync_lock_test_and_set(&queue_lock, 1))
 	//    while(queue_lock);
@@ -137,22 +128,18 @@ int check_safety(simtime_t time, unsigned int *events) {
 bool check_waiting(simtime_t time) {
 	// Check for thread with less event's timestamp
 //      log_info(PURPLE, "Event %f is checking if someone else has priority on region %d (%f)\n", time, current_lp, waiting_time_vector[current_lp] == INFTY ? -1 : waiting_time_vector[current_lp]);
-	return (waiting_time_vector[current_lp] < time || ( waiting_time_vector[current_lp] == time && tid < waiting_time_who[current_lp]) );
+	return (waiting_time_vector[current_lp] < time || ( waiting_time_vector[current_lp] == time && tid > waiting_time_who[current_lp]) );
 }
 
 void flush(void) {
-	double t_min;
 	unsigned int region;
-	simtime_t time;
 
 	log_info(NC, "Flushing event at time %f\n", current_lvt);
 
 	while (__sync_lock_test_and_set(&queue_lock, 1))
 		while (queue_lock) ;
 
-	t_min = queue_deliver_msgs();
 	region = current_msg.receiver_id;
-	time = current_msg.timestamp;
 
 //	outgoing_time_vector[tid] = (t_min != -1 ? t_min : time);
 //	current_time_vector[tid] = INFTY;

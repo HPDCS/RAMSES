@@ -307,14 +307,14 @@ void UseTopology(unsigned int _topology) {
 	topology = _topology;
 }
 
-unsigned int FindRegion(int topology) {
+unsigned int FindRegion(int _topology) {
 
 	unsigned int direction;
 	int target;
 
 	do {
 		// Basiong on the topology a random direction is chosen
-		switch (topology) {
+		switch (_topology) {
 		case TOPOLOGY_HEXAGON:
 			direction = RandomRange(0, 5);
 			break;

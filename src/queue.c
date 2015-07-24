@@ -106,7 +106,7 @@ double queue_pre_min(void) {
 
 double queue_deliver_msgs(void) {
 	msg_t *new_hole;
-	int i;
+	unsigned int i;
 	double mintime;
 
 	for (i = 0; i < _thr_pool._thr_pool_count; i++) {

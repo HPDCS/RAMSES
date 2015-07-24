@@ -126,7 +126,7 @@ void call_instrumented_function(msg_t * m) {
 		printf("Event type = %d\n", m->type);
 		exit(EXIT_FAILURE);
 	}
-	log_info(NC, "Finding function at address '%#08llx'\n", function);
+	log_info(NC, "Finding function at address '%p'\n", function);
 
 	// Find the instrumented function
 	for (i = 0; i < num_functions; i++) {
@@ -135,7 +135,7 @@ void call_instrumented_function(msg_t * m) {
 			goto do_call;
 		}
 	}
-	printf("Function at address '%#08llx' does not found!!\n", function);
+	printf("Function at address '%p' does not found!!\n", function);
 	fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
 	exit(EXIT_FAILURE);
 do_call:
@@ -151,7 +151,7 @@ void call_regular_function(msg_t * m) {
 		function = m->update;
 	} else {
 		fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
-		printf("Unable to find function at address %#08llx\n", function);
+		printf("Unable to find function at address %p\n", function);
 		exit(EXIT_FAILURE);
 	}
 	call_it(function, m);

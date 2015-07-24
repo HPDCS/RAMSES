@@ -31,7 +31,7 @@ double queue_deliver_msgs(void);
 
 void queue_destroy(void);
 
-void resest_outgoing_msg(void);
+void reset_outgoing_msg(void);
 
 extern int *region_lock;
 
