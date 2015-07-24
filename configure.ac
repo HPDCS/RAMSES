@@ -26,6 +26,8 @@ AC_PROG_CC_C_O
 AM_PROG_CC_C_O
 LT_INIT
 
+CC=gcc
+
 
 #----------------------------------------------------------------------------
 # Checks for C header files and libraries
