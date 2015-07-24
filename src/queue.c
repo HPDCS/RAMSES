@@ -15,6 +15,9 @@
 #include "calqueue.h"
 #include "core.h"
 
+
+extern simtime_t *current_time_vector;
+
 typedef struct __event_pool_node {
 	msg_t message;
 	calqueue_node *calqueue_node_reference;
@@ -53,6 +56,11 @@ __thread __temp_thread_pool _thr_pool __attribute__ ((aligned(64)));
 
 int queue_lock = 0;
 int *region_lock;
+
+
+void reset_outgoing_msg(void) {
+	_thr_pool._thr_pool_count = 0;
+}
 
 void queue_init(void) {
 	
@@ -129,9 +137,12 @@ msg_t *queue_min(void) {
 
 	node_ret = calqueue_get();
 	if (node_ret == NULL) {
+		current_time_vector[tid] = INFTY;
 		__sync_lock_release(&queue_lock);
-		return node_ret;
+		return NULL;
 	}
+
+	current_time_vector[tid] = node_ret->timestamp;
 
 	__sync_lock_release(&queue_lock);
 

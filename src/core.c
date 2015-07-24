@@ -431,28 +431,33 @@ void thread_loop(unsigned int thread_id) {
 			log_info(NC, "Event %f waits for commit\n", current_msg.timestamp);
 			
 			while (1) {
-				// If some other thread is wating with a less event's timestp,
-				// then run a rollback and exit
-				if (check_waiting() == 1) {
-					log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_msg.timestamp);
-
-					rollbacks++;
-					if (current_m->type == EXECUTION_Move) {
-						// If the event is a move, than it can be handled entirely here
-						printf("ATTENZIONE IL ROLLBACK DELLA MOVE VA IMPLEMENTATO!\n");
-						move(current_m->entity1, current);
-						goto reexecute;
-					}
-
-					execute_undo_event(window);
-
-					goto reexecute;
-				}
 				// If the event is not yet safe continue to retry it safety
 				// hoping that commit horizion eventually will progress
 				if (check_safety(current_lvt, &events) == 1) {
 					log_info(GREEN, "Event at time %f has became safe: flushing...\n", current_msg.timestamp);
 					break;
+				} else {
+					// If some other thread is wating with a less event's timestp,
+				// then run a rollback and exit
+					if (check_waiting() == 1) {
+						log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_msg.timestamp);
+
+						rollbacks++;
+						if (current_m->type == EXECUTION_Move) {
+						// If the event is a move, than it can be handled entirely here
+							printf("ATTENZIONE IL ROLLBACK DELLA MOVE VA IMPLEMENTATO!\n");
+							move(current_m->entity1, current);
+							reset_outgoing_msg();
+							__sync_lock_release(&region_lock[current_msg.receiver_id]);
+							goto reexecute;
+						}
+
+						execute_undo_event(window);
+
+						reset_outgoing_msg();
+						__sync_lock_release(&region_lock[current_msg.receiver_id]);
+						goto reexecute;
+					}
 				}
 			}
 
@@ -460,6 +465,7 @@ void thread_loop(unsigned int thread_id) {
 		}
 
 		flush();
+		__sync_lock_release(&region_lock[current_msg.receiver_id]);
 
 		//      can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
 		//      stop = check_termination();

@@ -31,6 +31,9 @@ double queue_deliver_msgs(void);
 
 void queue_destroy(void);
 
+void resest_outgoing_msg(void);
+
+extern int *region_lock;
 
 extern __thread msg_t current_msg __attribute__ ((aligned (64)));
 
