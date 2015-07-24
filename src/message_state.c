@@ -31,12 +31,15 @@ void message_state_init(void) {
 	}
 }
 
-void execution_time(simtime_t time) {
+void execution_time(msg_t *msg) {
 	unsigned int region;
+	simtime_t time;
 	simtime_t waiting_time;
 
+	time = msg->timestamp;
+
 	// Gets the lock on the region
-	region = current_msg.receiver_id;
+	region = msg->receiver_id;
 
 	log_info(NC, "Event with time %f tring to acquired lock on region %d\n", time, region);
 
@@ -82,9 +85,9 @@ void min_output_time(simtime_t time) {
 }
 */
 
-void commit_time(void) {
+/*void commit_time(void) {
 	current_time_vector[tid] = INFTY;
-}
+}*/
 
 int check_safety(simtime_t time) {
 	unsigned int i;
@@ -131,7 +134,7 @@ bool check_waiting(simtime_t time) {
 	return (waiting_time_vector[current_lp] < time || ( waiting_time_vector[current_lp] == time && tid > waiting_time_who[current_lp]) );
 }
 
-void flush(void) {
+void flush(msg_t *msg) {
 	unsigned int region;
 
 	log_info(NC, "Flushing event at time %f\n", current_lvt);
@@ -139,7 +142,7 @@ void flush(void) {
 	while (__sync_lock_test_and_set(&queue_lock, 1))
 		while (queue_lock) ;
 
-	region = current_msg.receiver_id;
+	region = msg->receiver_id;
 
 //	outgoing_time_vector[tid] = (t_min != -1 ? t_min : time);
 //	current_time_vector[tid] = INFTY;

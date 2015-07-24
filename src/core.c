@@ -392,7 +392,7 @@ void thread_loop(void) {
 
 			if (type == EXECUTION_Move) {
 				current = agent_position[current_m->receiver_id];
-				move(current_msg.entity1, current_m->receiver_id);
+				move(current_m->entity1, current_m->receiver_id);
 			} else
 				call_regular_function(current_m);
 
@@ -405,14 +405,14 @@ void thread_loop(void) {
 
 			unsafe++;
 
-			log_info(RED, "Event at time %f is not safe: running in reversible mode\n", current_msg.timestamp);
+			log_info(RED, "Event at time %f is not safe: running in reversible mode\n", current_m->timestamp);
 
 			// Reset the reverse window
 			reset_window(window);
 
 			if (type == EXECUTION_Move) {
 				current = agent_position[current_m->receiver_id];
-				move(current_msg.entity1, current_m->receiver_id);
+				move(current_m->entity1, current_m->receiver_id);
 			} else {
 				call_instrumented_function(current_m);
 			}
@@ -424,19 +424,19 @@ void thread_loop(void) {
 			// Tries to commit actual event until thread finds out that
 			// someone else is waiting for the same region (current_lp)
 			// with a less timestamp. If this is the case, it does a rollback.
-			log_info(NC, "Event %f waits for commit\n", current_msg.timestamp);
+			log_info(NC, "Event %f waits for commit\n", current_m->timestamp);
 			
 			while (1) {
 				// If the event is not yet safe continue to retry it safety
 				// hoping that commit horizion eventually will progress
 				if (check_safety(current_lvt) == 1) {
-					log_info(GREEN, "Event at time %f has became safe: flushing...\n", current_msg.timestamp);
+					log_info(GREEN, "Event at time %f has became safe: flushing...\n", current_m->timestamp);
 					break;
 				} else {
 					// If some other thread is wating with a less event's timestp,
 				// then run a rollback and exit
-					if (check_waiting(current_msg.timestamp) == 1) {
-						log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_msg.timestamp);
+					if (check_waiting(current_m->timestamp) == 1) {
+						log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_m->timestamp);
 
 						rollbacks++;
 						if (current_m->type == EXECUTION_Move) {
@@ -444,14 +444,14 @@ void thread_loop(void) {
 							printf("ATTENZIONE IL ROLLBACK DELLA MOVE VA IMPLEMENTATO!\n");
 							move(current_m->entity1, current);
 							reset_outgoing_msg();
-							__sync_lock_release(&region_lock[current_msg.receiver_id]);
+							__sync_lock_release(&region_lock[current_m->receiver_id]);
 							goto reexecute;
 						}
 
 						execute_undo_event(window);
 
 						reset_outgoing_msg();
-						__sync_lock_release(&region_lock[current_msg.receiver_id]);
+						__sync_lock_release(&region_lock[current_m->receiver_id]);
 						goto reexecute;
 					}
 				}
@@ -460,8 +460,8 @@ void thread_loop(void) {
 			log_info(NC, "Reverse window has been released\n");
 		}
 
-		flush();
-		__sync_lock_release(&region_lock[current_msg.receiver_id]);
+		flush(current_m);
+		__sync_lock_release(&region_lock[current_m->receiver_id]);
 
 		//      can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
 		//      stop = check_termination();
@@ -477,10 +477,6 @@ void thread_loop(void) {
 				printf("TIME: %f\n", current_lvt);
 		}
 	}
-
-	// This thread is exiting, therefore it has to come out
-	// from the safety check otherwise it generate a starvation
-	min_output_time(INFTY);
 
 	//printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
 
