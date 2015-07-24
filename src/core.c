@@ -365,7 +365,7 @@ void thread_loop(void) {
 	revwin *window = NULL;
 	msg_t *current_m;
 	unsigned int current;
-	
+
 #ifdef FINE_GRAIN_DEBUG
 	unsigned int non_transactional_ex = 0, transactional_ex = 0;
 #endif
@@ -375,14 +375,14 @@ void thread_loop(void) {
 	while (!stop && !sim_error) {
 
 		current_m = queue_min();
-		if(current_m == NULL) {
+		if (current_m == NULL) {
 			continue;
 		}
 
 		current_lp = current_m->receiver_id;
 		current_lvt = current_m->timestamp;
 		type = current_m->type;
-		
+
  reexecute:
 
 		if (check_safety(current_lvt) == 1) {
@@ -425,7 +425,7 @@ void thread_loop(void) {
 			// someone else is waiting for the same region (current_lp)
 			// with a less timestamp. If this is the case, it does a rollback.
 			log_info(NC, "Event %f waits for commit\n", current_m->timestamp);
-			
+
 			while (1) {
 				// If the event is not yet safe continue to retry it safety
 				// hoping that commit horizion eventually will progress
@@ -434,13 +434,13 @@ void thread_loop(void) {
 					break;
 				} else {
 					// If some other thread is wating with a less event's timestp,
-				// then run a rollback and exit
+					// then run a rollback and exit
 					if (check_waiting(current_m->timestamp) == 1) {
 						log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_m->timestamp);
 
 						rollbacks++;
 						if (current_m->type == EXECUTION_Move) {
-						// If the event is a move, than it can be handled entirely here
+							// If the event is a move, than it can be handled entirely here
 							printf("ATTENZIONE IL ROLLBACK DELLA MOVE VA IMPLEMENTATO!\n");
 							move(current_m->entity1, current);
 							reset_outgoing_msg();
@@ -561,13 +561,12 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 		fprintf(stderr, "ERROR: Starting a simulation with no agents. Aborting...\n");
 		exit(EXIT_FAILURE);
 	}
-
 	// Initialize the two structure which hold region and agent reciprocal positions
 	// Note: agent_position is initialized with '-1', therefore it is possible to
 	// check whether the application has invoked also the InitialPosition which set it,
 	// otherwise the agent will be simply disposed.
 	agent_position = malloc(sizeof(unsigned int) * agentc);
-	for(i = 0; i < agentc; i++) {
+	for (i = 0; i < agentc; i++) {
 		agent_position[i] = UINT_MAX;
 	}
 

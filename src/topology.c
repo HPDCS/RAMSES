@@ -117,7 +117,6 @@ static unsigned int get_target_id(unsigned int region_id, unsigned int direction
 			rootsim_error(true, "Square map wrongly specified!\n");
 			return 0;
 		}
-
 		// Very simple case!
 		if (region_c == 1) {
 			target = region_id;

@@ -299,7 +299,6 @@ static void load_seed(void) {
 	if ((fp = fopen(conf_file, "r+")) == NULL) {
 		rootsim_error(true, "Unable to load numerical distribution configuration: %s. Aborting...", conf_file);
 	}
-
 	// Load the initial seed
 	fscanf(fp, "%llu", (unsigned long long *)&master_seed);
 

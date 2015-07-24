@@ -9,5 +9,4 @@ typedef uint64_t seed_type;
 
 void numerical_init(void);
 
-#endif /* #ifndef __NUMERICAL_H */
-
+#endif				/* #ifndef __NUMERICAL_H */

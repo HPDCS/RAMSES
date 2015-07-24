@@ -31,7 +31,7 @@ void message_state_init(void) {
 	}
 }
 
-void execution_time(msg_t *msg) {
+void execution_time(msg_t * msg) {
 	unsigned int region;
 	simtime_t time;
 	simtime_t waiting_time;
@@ -43,8 +43,7 @@ void execution_time(msg_t *msg) {
 
 	log_info(NC, "Event with time %f tring to acquired lock on region %d\n", time, region);
 
-
-    retry:
+ retry:
 	if (__sync_lock_test_and_set(&region_lock[region], 1) == 1) {
 		// If the thread cannot acquire the lock, this means that another
 		// one is performing an event on that region; it has to register
@@ -52,7 +51,7 @@ void execution_time(msg_t *msg) {
 		// time is less then the possible already registerd one.
 
 		while (__sync_lock_test_and_set(&waiting_time_lock[region], 1))
-			while (waiting_time_lock[region]);
+			while (waiting_time_lock[region]) ;
 
 		waiting_time = waiting_time_vector[region];
 
@@ -62,13 +61,12 @@ void execution_time(msg_t *msg) {
 			waiting_time_who[region] = tid;
 		}
 
-
 		__sync_lock_release(&waiting_time_lock);
 
 		// Spins over the region_lock until the current event time is grater
 		// than the waiting one
 
-		while ( (time > waiting_time) || (time == waiting_time && waiting_time_who[region] < tid) ) {
+		while ((time > waiting_time) || (time == waiting_time && waiting_time_who[region] < tid)) {
 			waiting_time = waiting_time_vector[region];
 		}
 
@@ -92,25 +90,24 @@ void min_output_time(simtime_t time) {
 int check_safety(simtime_t time) {
 	unsigned int i;
 
-
 	//  while(__sync_lock_test_and_set(&queue_lock, 1))
 	//    while(queue_lock);
 
 	for (i = 0; i < n_cores; i++) {
 
-		if ( (i != tid) && ( ( current_time_vector[i] < time ) || (current_time_vector[i] == time && i < tid)  ) ) {
+		if ((i != tid) && ((current_time_vector[i] < time) || (current_time_vector[i] == time && i < tid))) {
 
 			return 0;
-//			min = (current_time_vector[i] < outgoing_time_vector[i] ? current_time_vector[i] : outgoing_time_vector[i]);
-//			min_tid = i;
-//			*events++;
+//                      min = (current_time_vector[i] < outgoing_time_vector[i] ? current_time_vector[i] : outgoing_time_vector[i]);
+//                      min_tid = i;
+//                      *events++;
 		}
 
 		/*if ((i != tid) && ((current_time_vector[i] < min) || (outgoing_time_vector[i] < min))) {
-			min = (current_time_vector[i] < outgoing_time_vector[i] ? current_time_vector[i] : outgoing_time_vector[i]);
-			min_tid = i;
-			*events++;
-		}*/
+		   min = (current_time_vector[i] < outgoing_time_vector[i] ? current_time_vector[i] : outgoing_time_vector[i]);
+		   min_tid = i;
+		   *events++;
+		   } */
 	}
 /*	log_info(YELLOW, "Checking safety for time %f, min is %f hold by thread %d\n", time, min == INFTY ? -1 : min, min_tid);
 	if (current_time_vector[tid] < min) {
@@ -118,9 +115,9 @@ int check_safety(simtime_t time) {
 		goto out;
 	}
 */
-//	if (current_time_vector[tid] == min && tid < min_tid) {
-//		ret = 1;
-//	}
+//      if (current_time_vector[tid] == min && tid < min_tid) {
+//              ret = 1;
+//      }
 
 // out:
 	//  __sync_lock_release(&queue_lock);
@@ -131,10 +128,10 @@ int check_safety(simtime_t time) {
 bool check_waiting(simtime_t time) {
 	// Check for thread with less event's timestamp
 //      log_info(PURPLE, "Event %f is checking if someone else has priority on region %d (%f)\n", time, current_lp, waiting_time_vector[current_lp] == INFTY ? -1 : waiting_time_vector[current_lp]);
-	return (waiting_time_vector[current_lp] < time || ( waiting_time_vector[current_lp] == time && tid > waiting_time_who[current_lp]) );
+	return (waiting_time_vector[current_lp] < time || (waiting_time_vector[current_lp] == time && tid > waiting_time_who[current_lp]));
 }
 
-void flush(msg_t *msg) {
+void flush(msg_t * msg) {
 	unsigned int region;
 
 	log_info(NC, "Flushing event at time %f\n", current_lvt);
@@ -144,19 +141,19 @@ void flush(msg_t *msg) {
 
 	region = msg->receiver_id;
 
-//	outgoing_time_vector[tid] = (t_min != -1 ? t_min : time);
-//	current_time_vector[tid] = INFTY;
+//      outgoing_time_vector[tid] = (t_min != -1 ? t_min : time);
+//      current_time_vector[tid] = INFTY;
 	while (__sync_lock_test_and_set(&waiting_time_lock[region], 1))
-		while (waiting_time_lock[region]);
+		while (waiting_time_lock[region]) ;
 
 	waiting_time_vector[region] = INFTY;
 	waiting_time_who[region] = n_cores;
 
 	__sync_lock_release(&waiting_time_lock);
 
-//	log_info(NC, "Vector status: outgoing=%f\n", t_min);
+//      log_info(NC, "Vector status: outgoing=%f\n", t_min);
 
-//	log_info(NC, "Lock on region %d released by event %f\n", region, time);
+//      log_info(NC, "Lock on region %d released by event %f\n", region, time);
 
 	__sync_lock_release(&queue_lock);
 }

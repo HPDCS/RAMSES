@@ -15,7 +15,6 @@
 #include "calqueue.h"
 #include "core.h"
 
-
 extern simtime_t *current_time_vector;
 
 typedef struct __event_pool_node {
@@ -52,18 +51,15 @@ typedef struct __temp_thread_pool {
 
 __thread __temp_thread_pool _thr_pool __attribute__ ((aligned(64)));
 
-
-
 int queue_lock = 0;
 int *region_lock;
-
 
 void reset_outgoing_msg(void) {
 	_thr_pool._thr_pool_count = 0;
 }
 
 void queue_init(void) {
-	
+
 	calqueue_init();
 }
 
@@ -115,7 +111,7 @@ double queue_deliver_msgs(void) {
 		calqueue_put(new_hole->timestamp, new_hole);
 	}
 
-	if(i == 0) {
+	if (i == 0) {
 		mintime = -1;
 	} else {
 		mintime = _thr_pool.min_time;

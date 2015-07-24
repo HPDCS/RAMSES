@@ -79,11 +79,9 @@ void initialize_map(int argc, char **argv, char **envp) {
 		printf("Function %s: original address: %p instrumented address: %p\n", function_map[i].function_name, function_map[i].original_address, function_map[i].instrumented_address);
 	} unlink("dump");
 	printf("----------------COMPLETE-----------------\n");
-} 
+}
 
 __attribute__ ((section(".preinit_array"))) __typeof__(initialize_map) * __initialize_map = initialize_map;
-
-
 
 static void call_it(void *f, msg_t * m) {
 	interaction_f interaction;
@@ -113,7 +111,6 @@ static void call_it(void *f, msg_t * m) {
 	}
 }
 
-
 void call_instrumented_function(msg_t * m) {
 	void *function = NULL;
 	int i;
@@ -138,10 +135,9 @@ void call_instrumented_function(msg_t * m) {
 	printf("Function at address '%p' does not found!!\n", function);
 	fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
 	exit(EXIT_FAILURE);
-do_call:
-        call_it(function, m);
+ do_call:
+	call_it(function, m);
 }
-
 
 void call_regular_function(msg_t * m) {
 	void *function = NULL;

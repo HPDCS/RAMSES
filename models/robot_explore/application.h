@@ -2,7 +2,6 @@
 #ifndef _TCAR_H
 #define _TCAR_H
 
-
 #include <ABM.h>
 #include <math.h>
 
@@ -12,9 +11,7 @@
 
 #define DISTRIBUZIONE ESPONENZIALE
 
-
 #define is_agent(me) (me >= num_cells)
-
 
 // Topology
 #define CELL_EDGES 4
@@ -50,47 +47,40 @@
 #define ALLOCATE_BITMAP(size) (malloc(BITMAP_SIZE(size)))
 #define BITMAP_BZERO(map, size) (bzero(((unsigned char*)(map)), BITMAP_SIZE(size)))
 
-
 extern unsigned int number_of_regions;
 extern unsigned int number_of_agents;
-
 
 typedef struct _event_content_type {
 	unsigned int coming_from;
 	unsigned int cell;
 } event_content_type;
 
-
-typedef struct _cell_state_type{
+typedef struct _cell_state_type {
 	unsigned int *agents;
 	unsigned int present_agents;
-	unsigned char neighbours;		/// Neighbour cell for each edge
-	unsigned char obstacles;		/// Whether the specific edge has an obstacle
+	unsigned char neighbours;	/// Neighbour cell for each edge
+	unsigned char obstacles;	/// Whether the specific edge has an obstacle
 } cell_state_type;
-
 
 typedef struct _map_t {
 	bool visited;
 	unsigned int neighbours[CELL_EDGES];
 } map_t;
 
-
 typedef struct _agent_state_type {
-	unsigned int current_cell;				/// This is the current region where the agent actually is
-//	unsigned int current_direction;			/// TODO: probably is no more used
-	unsigned int target_cell;				/// Region's id of the target the agent is pursuing
-	unsigned int direction;					/// TODO: probably is no more used
-	unsigned int met_robots;				/// Number of robots the agent met so far
-	unsigned int visited_cells;				/// Number of regions the agent visited so far
-	unsigned char *visit_map;				/// Bit map to traces visited cells
-	unsigned char *a_star_map;				/// Bit map to traces dinamyc A* algorithm research
+	unsigned int current_cell;	/// This is the current region where the agent actually is
+//      unsigned int current_direction;                 /// TODO: probably is no more used
+	unsigned int target_cell;	/// Region's id of the target the agent is pursuing
+	unsigned int direction;	/// TODO: probably is no more used
+	unsigned int met_robots;	/// Number of robots the agent met so far
+	unsigned int visited_cells;	/// Number of regions the agent visited so far
+	unsigned char *visit_map;	/// Bit map to traces visited cells
+	unsigned char *a_star_map;	/// Bit map to traces dinamyc A* algorithm research
 } agent_state_type;
-
 
 // FIXME: cambiato nome delle seguenti per non confonderle con gli agenti in prossimità
 // le loro definizioni si trovano nel file 'region.h'
 //bool isValidNeighbour(unsigned int sender, unsigned int neighbour);
 //unsigned int GetNeighbourId(unsigned int sender, unsigned int neighbour);
 
-
-#endif /* _ANT_ROBOT_H */
+#endif				/* _ANT_ROBOT_H */
