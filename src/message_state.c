@@ -21,6 +21,7 @@ void message_state_init(void) {
 	current_time_vector = malloc(sizeof(simtime_t) * n_cores);
 	waiting_time_vector = malloc(sizeof(simtime_t) * region_c);
 	waiting_time_who = malloc(sizeof(simtime_t) * region_c);
+	
 	waiting_time_lock = malloc(sizeof(int) * region_c);
 	region_lock = malloc(sizeof(int) * region_c);
 
@@ -30,6 +31,11 @@ void message_state_init(void) {
 
 	for (i = 0; i < region_c; i++) {
 		waiting_time_vector[i] = INFTY;
+	}
+
+	for (i = 0; i < region_c; i++) {
+		waiting_time_lock[i] = 0;
+		region_lock[i] = 0;
 	}
 }
 
@@ -53,7 +59,7 @@ void execution_time(msg_t * msg) {
 		// its event's timestamp on the waiting queue, if and only if that
 		// time is less then the possible already registerd one.
 
-		while (__sync_lock_test_and_set(&waiting_time_lock[region], 1))
+		while (__sync_lock_test_and_set(&waiting_time_lock[region], 1) == 1)
 			while (waiting_time_lock[region]) ;
 
 		waiting_time = waiting_time_vector[region];
@@ -139,20 +145,21 @@ void flush(msg_t * msg) {
 
 	log_info(NC, "Flushing event at time %f\n", current_lvt);
 
-	while (__sync_lock_test_and_set(&queue_lock, 1))
+	while (__sync_lock_test_and_set(&queue_lock, 1) == 1)
 		while (queue_lock) ;
 
 	region = msg->receiver_id;
 
 //      outgoing_time_vector[tid] = (t_min != -1 ? t_min : time);
 //      current_time_vector[tid] = INFTY;
-	while (__sync_lock_test_and_set(&waiting_time_lock[region], 1))
+	while (__sync_lock_test_and_set(&waiting_time_lock[region], 1) == 1)
 		while (waiting_time_lock[region]) ;
 
 	waiting_time_vector[region] = INFTY;
 	waiting_time_who[region] = n_cores;
 
 	__sync_lock_release(&waiting_time_lock[region]);
+
 
 //      log_info(NC, "Vector status: outgoing=%f\n", t_min);
 

@@ -105,7 +105,7 @@ void *region_init(unsigned int id) {
 	}
 
 	// Fires the initial interaction event
-	start_time = 10 * Random();
+	start_time = 10 * Random() + id;
 	EnvironmentUpdate(id, start_time, update_region, NULL, 0);
 
 	return state;
