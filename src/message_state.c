@@ -159,7 +159,10 @@ void flush(msg_t * msg) {
 	waiting_time_who[region] = n_cores;
 
 	__sync_lock_release(&waiting_time_lock[region]);
-
+	
+	// TODO: la queue_deliver_msgs serve per permettere l'inserimento di nuovi
+	// eventi nella calqueue. Da verificare dove spostarla
+	queue_deliver_msgs();
 
 //      log_info(NC, "Vector status: outgoing=%f\n", t_min);
 
