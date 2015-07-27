@@ -4,6 +4,9 @@
 
 #include "simtypes.h"
 
+
+extern simtime_t *current_time_vector;
+
 bool check_waiting(simtime_t time);
 
 void message_state_init(void);

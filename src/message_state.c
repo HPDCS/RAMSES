@@ -39,6 +39,9 @@ void message_state_init(void) {
 	}
 }
 
+void reset_waiting_time(void) {
+}
+
 void execution_time(msg_t * msg) {
 	unsigned int region;
 	simtime_t time;
@@ -155,8 +158,10 @@ void flush(msg_t * msg) {
 	while (__sync_lock_test_and_set(&waiting_time_lock[region], 1) == 1)
 		while (waiting_time_lock[region]) ;
 
-	waiting_time_vector[region] = INFTY;
-	waiting_time_who[region] = n_cores;
+	if(waiting_time_who[region] == tid) {
+		waiting_time_vector[region] = INFTY;
+		waiting_time_who[region] = n_cores;
+	}
 
 	__sync_lock_release(&waiting_time_lock[region]);
 	

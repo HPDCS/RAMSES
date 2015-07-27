@@ -480,6 +480,10 @@ void thread_loop(void) {
 		}
 	}
 
+	current_time_vector[tid] = INFTY;
+
+	
+
 	//printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
 
 #ifdef FINE_GRAIN_DEBUG
