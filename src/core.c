@@ -229,7 +229,7 @@ int GetNeighbours(unsigned int **neighbours) {
 
 void InitialPosition(unsigned int region) {
 
-	printf("INFO: agent %d set in region %d\n", current_lp, region);
+//	printf("INFO: agent %d set in region %d\n", current_lp, region);
 
 	// At this time, current_lp holds the current agent that is
 	// being initialized dureing the setup phase.
@@ -241,17 +241,17 @@ static void process_init_event(void) {
 	unsigned int index;
 	unsigned int agent;
 
-	printf("Initializing event manager...\n");
+//	printf("Initializing event manager...\n");
 
 	// Regions' and agents' states are held by the variabile 'states', which is a linear
 	// array; therefore it coalesces all the states together:
 	// first all the regions, then all the agents
 
-	printf("Set up regions\n");
+//	printf("Set up regions\n");
 	// Sets up REGIONS
 	current_lvt = 0;
 	for (index = 0; index < region_c; index++) {
-		printf("Call application initializer callback for region %d...\n", index);
+//		printf("Call application initializer callback for region %d...\n", index);
 //              current_lp = index;
 
 		// Calls registered callback function to initialize the regions.
@@ -261,10 +261,10 @@ static void process_init_event(void) {
 		queue_deliver_msgs();
 	}
 
-	printf("Set up agents\n");
+//	printf("Set up agents\n");
 	// Sets up AGENTS
 	for (agent = 0; agent < agent_c; agent++, index++) {
-		printf("Call application initializer callback for agent %d...\n", agent);
+//		printf("Call application initializer callback for agent %d...\n", agent);
 
 		// Temporary stores the agent's id in order to use it in the InitialPosition function.
 		// Note that this function should be called in the agent_initialization callback, during
@@ -300,7 +300,7 @@ static void process_init_event(void) {
 }*/
 
 void init(void) {
-	printf("Initializing internal structures...\n");
+//	printf("Initializing internal structures...\n");
 
 	states = malloc(sizeof(void *) * (region_c + agent_c));
 	can_stop = malloc(sizeof(bool) * region_c);
@@ -329,22 +329,22 @@ bool check_termination(void) {
 
 // API implementation
 void EnvironmentUpdate(unsigned int region, simtime_t time, update_f environment_update, void *args, size_t size) {
-	printf("Schedule EnvironmentUpdate at time %f\n", time);
+//	printf("Schedule EnvironmentUpdate at time %f\n", time);
 	queue_insert(region, UINT_MAX, UINT_MAX, NULL, environment_update, time, EXECUTION_EnvironmentUpdate, args, size);
 }
 
 void EnvironmentInteraction(unsigned int agent, unsigned int region, simtime_t time, interaction_f environment_interaction, void *args, size_t size) {
-	printf("Schedule EnvironmentInteraction at time %f\n", time);
+//	printf("Schedule EnvironmentInteraction at time %f\n", time);
 	queue_insert(region, agent, UINT_MAX, environment_interaction, NULL, time, EXECUTION_EnvironmentInteraction, args, size);
 }
 
 void AgentInteraction(unsigned int agent_a, unsigned int agent_b, simtime_t time, interaction_f agent_interaction, void *args, size_t size) {
-	printf("Schedule AgentInteraction at time %f\n", time);
+//	printf("Schedule AgentInteraction at time %f\n", time);
 	queue_insert(current_lp, agent_a, agent_b, agent_interaction, NULL, time, EXECUTION_AgentInteraction, args, size);
 }
 
 void Move(unsigned int agent, unsigned int destination, simtime_t time) {
-	printf("Schedule Move at time %f\n", time);
+//	printf("Schedule Move at time %f\n", time);
 	queue_insert(destination, agent, UINT_MAX, NULL, NULL, time, EXECUTION_Move, NULL, 0);
 }
 
@@ -443,7 +443,6 @@ void thread_loop(void) {
 						rollbacks++;
 						if (current_m->type == EXECUTION_Move) {
 							// If the event is a move, than it can be handled entirely here
-							printf("ATTENZIONE IL ROLLBACK DELLA MOVE VA IMPLEMENTATO!\n");
 							move(current_m->entity1, current);
 							reset_outgoing_msg();
 							__sync_lock_release(&region_lock[current_m->receiver_id]);

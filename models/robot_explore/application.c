@@ -48,7 +48,7 @@ void *agent_init(unsigned int id) {
 		exit(1);
 	}
 	BITMAP_BZERO(state->visit_map, number_of_regions);
-	printf("Allocated visit_map of %d bytes\n", BITMAP_SIZE(number_of_regions));
+//	printf("Allocated visit_map of %d bytes\n", BITMAP_SIZE(number_of_regions));
 
 	// Initializes visit map
 	state->a_star_map = ALLOCATE_BITMAP(number_of_regions);

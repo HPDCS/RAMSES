@@ -16,7 +16,7 @@ extern int queue_lock;
 void message_state_init(void) {
 	unsigned int i;
 
-	printf("n_cores is %d\n", n_cores);
+//	printf("n_cores is %d\n", n_cores);
 
 	current_time_vector = malloc(sizeof(simtime_t) * n_cores);
 	waiting_time_vector = malloc(sizeof(simtime_t) * region_c);
@@ -51,7 +51,7 @@ void execution_time(msg_t * msg) {
 
 	// Gets the lock on the region
 	region = msg->receiver_id;
-	printf("message: %p region: %d region_lock: %p\n", msg, region, region_lock);
+//	printf("message: %p region: %d region_lock: %p\n", msg, region, region_lock);
 
 	log_info(NC, "Event with time %f tring to acquired lock on region %d\n", time, region);
 
