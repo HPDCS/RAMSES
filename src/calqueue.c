@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <math.h>
 #include <stdbool.h>
 
 #include "calqueue.h"
@@ -245,7 +246,7 @@ void calqueue_init(void) {
 
 void calqueue_put(double timestamp, void *payload) {
 
-	int i;
+	int i, i_top;
 	calqueue_node *new_node, *traverse;
 
 	// Fill the node entry
@@ -255,7 +256,7 @@ void calqueue_put(double timestamp, void *payload) {
 	new_node->next = NULL;
 
 	// Calculate the number of the bucket in which to place the new entry
-	i = (int)(timestamp / (double)cwidth);	// Virtual bucket
+	i_top = i = (int)round(timestamp / (double)cwidth);	// Virtual bucket
 	i = i % nbuckets;	// Actual bucket
 
 	// Grab the head of events list in bucket i
@@ -282,7 +283,7 @@ void calqueue_put(double timestamp, void *payload) {
 	if (timestamp < lastprio) {
 		lastprio = timestamp;
 		lastbucket = i;
-		buckettop = (double)(i + 1) * cwidth + 0.5 * cwidth;
+		buckettop = (double)(i_top + 1) * cwidth + 0.5 * cwidth;
 	}
 	// Double the calendar size if needed
 	if (qsize > top_threshold && nbuckets < MAXNBUCKETS) {
