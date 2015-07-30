@@ -188,9 +188,9 @@ void *GetAgentState(unsigned int agent) {
 }
 
 int GetNeighbours(unsigned int **neighbours) {
-	unsigned int region_id;
-	unsigned int agent_id;
-	unsigned int count;
+	unsigned int region_id = 0;
+	unsigned int agent_id = 0;
+	unsigned int count = 0;
 	int index;
 
 	// Both regions and agents states are coalesced in a single linear
@@ -363,15 +363,16 @@ static void move(unsigned int agent, unsigned int destination) {
 // Main loop
 void thread_loop(void) {
 	int type;
-	revwin *window = NULL;
 	msg_t *current_m;
 	unsigned int current;
+	revwin *window = NULL;
 
 #ifdef FINE_GRAIN_DEBUG
 	unsigned int non_transactional_ex = 0, transactional_ex = 0;
 #endif
 
 	window = create_new_revwin(0);
+	printf("window is at %p\n", window);
 
 	while (!stop && !sim_error) {
 
@@ -463,6 +464,7 @@ void thread_loop(void) {
 
 		flush(current_m);
 		__sync_lock_release(&region_lock[current_m->receiver_id]);
+		free(current_m);
 
 		//      can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
 		//      stop = check_termination();
@@ -581,11 +583,13 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 	// check whether the application has invoked also the InitialPosition which set it,
 	// otherwise the agent will be simply disposed.
 	agent_position = malloc(sizeof(unsigned int) * agentc);
+	bzero(agent_position, sizeof(unsigned int) * agentc);
 	for (i = 0; i < agentc; i++) {
 		agent_position[i] = UINT_MAX;
 	}
 
 	presence_matrix = malloc(sizeof(bool *) * regionc);
+	bzero(presence_matrix, sizeof(bool *) * regionc);
 	for (i = 0; i < regionc; i++) {
 		presence_matrix[i] = malloc(sizeof(bool) * agentc);
 		for (j = 0; j < agent_c; j++) {
