@@ -349,8 +349,10 @@ int main(int argc, char **argv) {
 		number_of_threads = atoi(argv[1]);
 		number_of_agents = atoi(argv[2]);
 		number_of_regions = atoi(argv[3]);
+	} else {
+		fprintf(stderr, "Usage: %s <num_threads> <num_agents> <num_regions>\n", argv[0]);
+		exit(EXIT_FAILURE);
 	}
-//      printf("APP :: main\n");
 
 	// Setup the topology
 	UseTopology(TOPOLOGY_SQUARE);
