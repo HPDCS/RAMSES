@@ -4,6 +4,12 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 
 #include <ABM.h>
 
@@ -14,6 +20,52 @@
 static seed_type master_seed;
 
 seed_type *seeds;
+
+
+#define MAX_PATHLEN	512
+
+/**
+* This is an helper-function to allow the statistics subsystem create a new directory
+*
+* @author Alessandro Pellegrini
+*
+* @param path The path of the new directory to create
+*/
+static void _mkdir(const char *path) {
+
+	char opath[MAX_PATHLEN];
+	char *p;
+	size_t len;
+
+	strncpy(opath, path, sizeof(opath));
+	len = strlen(opath);
+	if (opath[len - 1] == '/')
+		opath[len - 1] = '\0';
+
+	// opath plus 1 is a hack to allow also absolute path
+	for (p = opath + 1; *p; p++) {
+		if (*p == '/') {
+			*p = '\0';
+			if (access(opath, F_OK))
+				if (mkdir(opath, S_IRWXU))
+					if (errno != EEXIST) {
+						rootsim_error(true, "Could not create output directory", opath);
+					}
+			*p = '/';
+		}
+	}
+
+	// Path does not terminate with a slash
+	if (access(opath, F_OK)) {
+		if (mkdir(opath, S_IRWXU)) {
+			if (errno != EEXIST) {
+				if (errno != EEXIST) {
+					rootsim_error(true, "Could not create output directory", opath);
+				}
+			}
+		}
+	}
+}
 
 /**
 * This function returns a number in between (0,1), according to a Uniform Distribution.

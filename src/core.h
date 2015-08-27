@@ -14,7 +14,6 @@
 
 #define D_DIFFER_ZERO(a) (fabs(a) >= DBL_EPSILON)
 
-#define EXECUTION_IDLE				-1
 #define EXECUTION_AgentInteraction		1
 #define EXECUTION_EnvironmentInteraction	2
 #define EXECUTION_EnvironmentUpdate		3
@@ -69,10 +68,5 @@ extern unsigned int n_cores;
 void thread_loop(void);
 
 extern void rootsim_error(bool fatal, const char *msg, ...);
-
-extern void _mkdir(const char *path);
-
-/*extern int OnGVT(unsigned int me, void *snapshot);
-extern void ProcessEvent(unsigned int me, simtime_t now, unsigned int event, void *content, unsigned int size, void *state);*/
 
 #endif
