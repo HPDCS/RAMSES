@@ -9,7 +9,6 @@ lib_LIBRARIES = libabm.a libabm_mm.a
 
 libabm_a_SOURCES =	calqueue.c \
 			core.c \
-			message_state.c \
 			numerical.c \
 			queue.c \
 			topology.c \

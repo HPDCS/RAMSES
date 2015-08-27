@@ -1,5 +1,4 @@
 #include <unistd.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sched.h>
@@ -7,10 +6,6 @@
 #include <string.h>
 #include <immintrin.h>
 #include <stdarg.h>
-#include <dirent.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <limits.h>
 
 #include <ABM.h>
@@ -20,7 +15,6 @@
 
 #include "core.h"
 #include "queue.h"
-#include "message_state.h"
 #include "simtypes.h"
 #include "function_map.h"
 
@@ -31,12 +25,21 @@
 //Le abort "volontarie" avranno questo codice
 #define _ROLLBACK_CODE		127
 
-#define MAX_PATHLEN	512
 
 #define HILL_EPSILON_GREEDY	0.05
 #define HILL_CLIMB_EVALUATE	500
 #define DELTA 500		// tick count
 #define HIGHEST_COUNT	5
+
+
+simtime_t *current_time_vector;
+static simtime_t *waiting_time_vector;
+static simtime_t *waiting_time_who;
+int *waiting_time_lock;
+
+extern int queue_lock;
+
+
 
 // Statistics
 static timer simulation_start;
@@ -45,20 +48,11 @@ static unsigned int rollbacks = 0;
 static unsigned int safe = 0;
 static unsigned int unsafe = 0;
 
-__thread int delta_count = 0;
-__thread double abort_percent = 1.0;
-
-__thread int execution_state = EXECUTION_IDLE;
-
 static unsigned short int number_of_threads = 1;
 
 // API callbacks
 static init_f agent_initialization;
 static init_f region_initialization;
-
-//unsigned int *lock_vector;                    /// Tells whether one region has been locked by some thread
-//unsigned int *waiting;                /// Maintains the successor thread waiting for that region
-//unsigned int *owner_vector;                   /// Keeps track of the current owner of the region
 
 unsigned int agent_c = 0;
 unsigned int region_c = 0;
@@ -70,11 +64,6 @@ __thread simtime_t current_lvt = 0;
 __thread unsigned int current_lp = 0;	/// Represents the region's id
 __thread unsigned int tid = 0;	/// Logical id of the worker thread (may be different from the region's id)
 
-// TODO: servono ?
-__thread unsigned long long evt_count = 0;
-__thread unsigned long long evt_try_count = 0;
-__thread unsigned long long abort_count_conflict = 0, abort_count_safety = 0;
-
 /* Total number of cores required for simulation */
 unsigned int n_cores;		// TODO: ?
 
@@ -83,6 +72,9 @@ bool sim_error = false;
 
 void **states;			/// Linear vector which holds pointers to regions' (first) and agents' states
 bool *can_stop;
+
+
+unsigned int evt_count;
 
 void rootsim_error(bool fatal, const char *msg, ...) {
 	char buf[1024];
@@ -104,77 +96,6 @@ void rootsim_error(bool fatal, const char *msg, ...) {
 	}
 }
 
-/**
-* This is an helper-function to allow the statistics subsystem create a new directory
-*
-* @author Alessandro Pellegrini
-*
-* @param path The path of the new directory to create
-*/
-void _mkdir(const char *path) {
-
-	char opath[MAX_PATHLEN];
-	char *p;
-	size_t len;
-
-	strncpy(opath, path, sizeof(opath));
-	len = strlen(opath);
-	if (opath[len - 1] == '/')
-		opath[len - 1] = '\0';
-
-	// opath plus 1 is a hack to allow also absolute path
-	for (p = opath + 1; *p; p++) {
-		if (*p == '/') {
-			*p = '\0';
-			if (access(opath, F_OK))
-				if (mkdir(opath, S_IRWXU))
-					if (errno != EEXIST) {
-						rootsim_error(true, "Could not create output directory", opath);
-					}
-			*p = '/';
-		}
-	}
-
-	// Path does not terminate with a slash
-	if (access(opath, F_OK)) {
-		if (mkdir(opath, S_IRWXU)) {
-			if (errno != EEXIST) {
-				if (errno != EEXIST) {
-					rootsim_error(true, "Could not create output directory", opath);
-				}
-			}
-		}
-	}
-}
-
-void throttling(unsigned int events) {
-	unsigned long long tick_count;
-	//~register int i;
-
-	if (delta_count == 0)
-		return;
-
-	tick_count = CLOCK_READ();
-	while (true) {
-		if (CLOCK_READ() > tick_count + events * DELTA * delta_count)
-			break;
-	}
-}
-
-void hill_climbing(void) {
-	if ((double)abort_count_safety / (double)evt_count < abort_percent && delta_count < HIGHEST_COUNT) {
-		delta_count++;
-//              printf("Incrementing delta_count to %d\n", delta_count);
-	} else {
-/*		if(random() / RAND_MAX < HILL_EPSILON_GREEDY) {
-			delta_count /= (random() / RAND_MAX) * 10 + 1;
-		}
-*/ }
-
-	abort_percent = (double)abort_count_safety / (double)evt_count;
-}
-
-// TODO: ?
 void SetState(void *ptr) {
 	states[current_lp] = ptr;
 }
@@ -241,19 +162,9 @@ static void process_init_event(void) {
 	unsigned int index;
 	unsigned int agent;
 
-//	printf("Initializing event manager...\n");
-
-	// Regions' and agents' states are held by the variabile 'states', which is a linear
-	// array; therefore it coalesces all the states together:
-	// first all the regions, then all the agents
-
-//	printf("Set up regions\n");
 	// Sets up REGIONS
 	current_lvt = 0;
 	for (index = 0; index < region_c; index++) {
-//		printf("Call application initializer callback for region %d...\n", index);
-//              current_lp = index;
-
 		// Calls registered callback function to initialize the regions.
 		// Callback function will return the pointer to the initialized region's state
 		states[index] = (*region_initialization) (index);
@@ -261,11 +172,8 @@ static void process_init_event(void) {
 		queue_deliver_msgs();
 	}
 
-//	printf("Set up agents\n");
 	// Sets up AGENTS
 	for (agent = 0; agent < agent_c; agent++, index++) {
-//		printf("Call application initializer callback for agent %d...\n", agent);
-
 		// Temporary stores the agent's id in order to use it in the InitialPosition function.
 		// Note that this function should be called in the agent_initialization callback, during
 		// the initialization phase; therefore it is safe to use 'tid' in the meanwhile, since
@@ -280,24 +188,6 @@ static void process_init_event(void) {
 	}
 }
 
-/*void init(unsigned int _thread_num, unsigned int lps_num) {
-	printf("Starting an execution with %u threads, %u LPs\n", _thread_num, lps_num);
-	n_cores = _thread_num;
-	region_c = lps_num;
-	states = malloc(sizeof(void *) * region_c);
-	can_stop = malloc(sizeof(bool) * region_c);
-
-#ifndef NO_DYMELOR
-	dymelor_init();
-#endif
-
-	queue_init();
-	message_state_init();
-	numerical_init();
-
-	//  queue_register_thread();
-	process_init_event();
-}*/
 
 void init(void) {
 //	printf("Initializing internal structures...\n");
@@ -312,8 +202,6 @@ void init(void) {
 	queue_init();
 	numerical_init();
 
-	//  queue_register_thread();
-	//process_init_event();
 }
 
 bool check_termination(void) {
@@ -359,6 +247,137 @@ static void move(unsigned int agent, unsigned int destination) {
 
 	log_info(NC, "Agent %d moved from %d to %d\n", agent, source, destination);
 }
+
+
+
+
+void message_state_init(void) {
+	unsigned int i;
+
+//	printf("n_cores is %d\n", n_cores);
+
+	current_time_vector = malloc(sizeof(simtime_t) * n_cores);
+	waiting_time_vector = malloc(sizeof(simtime_t) * region_c);
+	waiting_time_who = malloc(sizeof(simtime_t) * region_c);
+	
+	waiting_time_lock = malloc(sizeof(int) * region_c);
+	region_lock = malloc(sizeof(int) * region_c);
+
+	for (i = 0; i < n_cores; i++) {
+		current_time_vector[i] = INFTY;
+	}
+
+	for (i = 0; i < region_c; i++) {
+		waiting_time_vector[i] = INFTY;
+	}
+
+	for (i = 0; i < region_c; i++) {
+		waiting_time_lock[i] = 0;
+		region_lock[i] = 0;
+	}
+}
+
+
+void execution_time(msg_t * msg) {
+	unsigned int region;
+	simtime_t time;
+	simtime_t waiting_time;
+
+	time = msg->timestamp;
+
+	// Gets the lock on the region
+	region = msg->receiver_id;
+//	printf("message: %p region: %d region_lock: %p\n", msg, region, region_lock);
+
+	log_info(NC, "Event with time %f tring to acquired lock on region %d\n", time, region);
+
+ retry:
+	if (__sync_lock_test_and_set(&region_lock[region], 1) == 1) {
+		// If the thread cannot acquire the lock, this means that another
+		// one is performing an event on that region; it has to register
+		// its event's timestamp on the waiting queue, if and only if that
+		// time is less then the possible already registerd one.
+
+		while (__sync_lock_test_and_set(&waiting_time_lock[region], 1) == 1)
+			while (waiting_time_lock[region]) ;
+
+		waiting_time = waiting_time_vector[region];
+
+		if (time < waiting_time) {
+
+			waiting_time_vector[region] = time;
+			waiting_time_who[region] = tid;
+		}
+
+		__sync_lock_release(&waiting_time_lock[region]);
+
+		// Spins over the region_lock until the current event time is grater
+		// than the waiting one
+
+		while ((time > waiting_time) || (time == waiting_time && waiting_time_who[region] < tid)) {
+			waiting_time = waiting_time_vector[region];
+		}
+
+		goto retry;
+
+	}
+	log_info(NC, "Lock on region %d acquired by event %f\n", region, time);
+
+}
+
+int check_safety(simtime_t time) {
+	unsigned int i;
+
+	for (i = 0; i < n_cores; i++) {
+
+		if ((i != tid) && ((current_time_vector[i] < time) || (current_time_vector[i] == time && i < tid))) {
+
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+bool check_waiting(simtime_t time) {
+	// Check for thread with less event's timestamp
+//      log_info(PURPLE, "Event %f is checking if someone else has priority on region %d (%f)\n", time, current_lp, waiting_time_vector[current_lp] == INFTY ? -1 : waiting_time_vector[current_lp]);
+	return (waiting_time_vector[current_lp] < time || (waiting_time_vector[current_lp] == time && tid > waiting_time_who[current_lp]));
+}
+
+void flush(msg_t * msg) {
+	unsigned int region;
+
+	log_info(NC, "Flushing event at time %f\n", current_lvt);
+
+	while (__sync_lock_test_and_set(&queue_lock, 1) == 1)
+		while (queue_lock) ;
+
+	region = msg->receiver_id;
+
+	while (__sync_lock_test_and_set(&waiting_time_lock[region], 1) == 1)
+		while (waiting_time_lock[region]) ;
+
+	if(waiting_time_who[region] == tid) {
+		waiting_time_vector[region] = INFTY;
+		waiting_time_who[region] = n_cores;
+	}
+
+	__sync_lock_release(&waiting_time_lock[region]);
+	
+	// TODO: la queue_deliver_msgs serve per permettere l'inserimento di nuovi
+	// eventi nella calqueue. Da verificare dove spostarla
+	queue_deliver_msgs();
+
+//      log_info(NC, "Vector status: outgoing=%f\n", t_min);
+
+//      log_info(NC, "Lock on region %d released by event %f\n", region, time);
+
+	__sync_lock_release(&queue_lock);
+}
+
+
+
 
 // Main loop
 void thread_loop(void) {
@@ -420,10 +439,6 @@ void thread_loop(void) {
 				call_instrumented_function(current_m);
 			}
 
-#ifdef THROTTLING
-			throttling(events);
-#endif
-
 			// Tries to commit actual event until thread finds out that
 			// someone else is waiting for the same region (current_lp)
 			// with a less timestamp. If this is the case, it does a rollback.
@@ -469,12 +484,7 @@ void thread_loop(void) {
 		//      can_stop[current_lp] = OnGVT(current_lp, states[current_lp]);
 		//      stop = check_termination();
 
-#ifdef THROTTLING
-		if ((evt_count - HILL_CLIMB_EVALUATE * (evt_count / HILL_CLIMB_EVALUATE)) == 0)
-			hill_climbing();
-#endif
-
-		if (tid == _MAIN_PROCESS) {
+		if (tid == 0) {
 			evt_count++;
 			if ((evt_count - 100 * (evt_count / 100)) == 0)
 				printf("TIME: %f\n", current_lvt);
@@ -482,10 +492,6 @@ void thread_loop(void) {
 	}
 
 	current_time_vector[tid] = INFTY;
-
-	
-
-	//printf("Thread %d aborted %llu times for cross check condition and %llu for memory conflicts\n", tid, abort_count_conflict, abort_count_safety);
 
 #ifdef FINE_GRAIN_DEBUG
 

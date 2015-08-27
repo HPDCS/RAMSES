@@ -11,7 +11,6 @@
 #include <string.h>
 
 #include "queue.h"
-#include "message_state.h"
 #include "calqueue.h"
 #include "core.h"
 
