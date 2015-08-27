@@ -1,12 +1,11 @@
 C_PREREQ([2.67])
 
-AC_INIT([ABM-Sim],[1.0.0],[pellegrini@dis.uniroma1.it],[abmsim],[https://github.com/HPDCS/ABMSim])
+AC_INIT([RAMSES],[0.1.0],[pellegrini@dis.uniroma1.it],[abmsim],[https://github.com/HPDCS/RAMSES])
 AC_CONFIG_SRCDIR([src])
 AM_INIT_AUTOMAKE([1.11 -Wall foreign subdir-objects])
 AM_SILENT_RULES([yes])
 AC_CONFIG_MACRO_DIR([m4])
 AC_USE_SYSTEM_EXTENSIONS
-
 
 CFLAGS="-g3 -Wall -Wextra -O0 -Wswitch-enum -Wcast-align -Wpointer-arith -Wstrict-overflow=5 -Wstrict-prototypes -Winline -Wundef -Wnested-externs -Wshadow -Wunreachable-code -Wfloat-equal -Wredundant-decls -Wold-style-definition -std=c99 -fno-omit-frame-pointer -ffloat-store -fno-common -fstrict-aliasing -fgnu89-inline -rdynamic -lm"
 
@@ -24,14 +23,12 @@ AC_PROG_MAKE_SET
 AC_PROG_MKDIR_P
 AC_PROG_CC_C_O
 AM_PROG_CC_C_O
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 LT_INIT
 
 #----------------------------------------------------------------------------
-# Checks for C header files and libraries
-#----------------------------------------------------------------------------
-AC_CHECK_LIB([m], [log], [true], AC_MSG_FAILURE([libm not found]))
-
 # Check for POSIX thread support
+#----------------------------------------------------------------------------
 AX_PTHREAD([], [AC_MSG_ERROR([PTHREAD support not found])])
 
 LIBS="$PTHREAD_LIBS $LIBS"
