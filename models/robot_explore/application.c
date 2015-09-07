@@ -310,23 +310,6 @@ void update_region(unsigned int region_id, simtime_t now, void *args, size_t siz
 	EnvironmentUpdate(region_id, step_time, update_region, NULL, 0);
 }
 
-/**
- * It represents the callback invoked by the simulation platform whenever a new
- * movement event has to be processed.
- *
- * @param agent_id The agent's id which is going to move
- * @param region_id The destination region's id the agent would reach
- * @param time Current simulation time
- * @param args Pointer to a arguments vector
- * @param size Size (in bytes) of the arguments vector
- */
-void move(unsigned int agent_id, unsigned int region_id, simtime_t time, void *args, size_t size) {
-	cell_state_type *region;	// Target region's state
-	cell_state_type *current;	// Current position of the agent
-	agent_state_type *agent;	// Current agent's state
-	simtime_t step_time;
-
-}
 
 static void print_result() {
 	unsigned int agent_id;

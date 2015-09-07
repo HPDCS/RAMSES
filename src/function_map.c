@@ -66,7 +66,7 @@ void initialize_map(int argc, char **argv, char **envp) {
 
 	// Get non-instrumented addresses
 	for (i = 0; i < num_functions; i++) {
-		snprintf(buff, 1024, "readelf -a %s | grep FUNC | grep -v UND | grep -v \"_reverse\" | grep %s > dump", prog_name, function_map[i].function_name);
+		snprintf(buff, 1024, "readelf -Wa %s | grep FUNC | grep -v UND | grep -v \"_reverse\" | grep %s > dump", prog_name, function_map[i].function_name);
 		system(buff);
 		f = fopen("dump", "r");
 		if (fgets(buff, 1024, f) == NULL) {
@@ -77,7 +77,8 @@ void initialize_map(int argc, char **argv, char **envp) {
 		function_map[i].original_address = (void *)address;
 		fclose(f);
 		printf("Function %s: original address: %p instrumented address: %p\n", function_map[i].function_name, function_map[i].original_address, function_map[i].instrumented_address);
-	} unlink("dump");
+	}
+	unlink("dump");
 	printf("----------------COMPLETE-----------------\n");
 }
 
@@ -132,9 +133,9 @@ void call_instrumented_function(msg_t * m) {
 			goto do_call;
 		}
 	}
-	printf("Function at address '%p' does not found!!\n", function);
+	printf("Function at address '%p' not found!!\n", function);
 	fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
-	exit(EXIT_FAILURE);
+	abort();
  do_call:
 	call_it(function, m);
 }
