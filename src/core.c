@@ -117,7 +117,7 @@ static msg_t *fetch(void) {
 	log_info(NC, "Event with time %f tring to acquired lock on region %d\n", time, region);
 
  retry:
-	if (__sync_lock_test_and_set(&wait_who[region], 1) == 1) {
+	if (__sync_lock_test_and_set(&region_lock[region], 1) == 1) {
 		// If the thread cannot acquire the lock, this means that another
 		// one is performing an event on that region; it has to register
 		// its event's timestamp on the waiting queue, if and only if that
@@ -128,7 +128,7 @@ static msg_t *fetch(void) {
 
 		waiting_time = wait_time[region];
 
-		if (time < waiting_time) {
+		if (time < waiting_time || (time == waiting_time && tid < wait_who[region])) {
 
 			wait_time[region] = time;
 			wait_who[region] = tid;
@@ -222,6 +222,9 @@ void thread_loop(void) {
 	printf("window is at %p\n", window);
 
 	while (!stop && !sim_error) {
+
+		current_lp = UINT_MAX;
+		current_lvt = INFTY;
 
 		current_m = fetch();
 
