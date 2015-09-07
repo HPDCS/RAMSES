@@ -10,12 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "queue.h"
-#include "message_state.h"
+#include "message.h"
 #include "calqueue.h"
 #include "core.h"
 
-extern simtime_t *current_time_vector;
 
 typedef struct __event_pool_node {
 	msg_t message;
@@ -29,18 +27,6 @@ typedef struct __queue_t {
 
 } queue_t;
 
-/*
-typedef struct __temp_thread_pool
-{
-  msg_t *_tmp_mem __attribute__ ((aligned (64)));
-  void *_tmp_msg_data;
-  void *curr_msg_data;
-  simtime_t min_time;
-  unsigned int non_commit_size;
-  
-} temp_thread_pool;
-*/
-
 queue_t _queue;
 
 typedef struct __temp_thread_pool {
@@ -52,7 +38,6 @@ typedef struct __temp_thread_pool {
 __thread __temp_thread_pool _thr_pool __attribute__ ((aligned(64)));
 
 int queue_lock = 0;
-int *region_lock;
 
 void reset_outgoing_msg(void) {
 	_thr_pool._thr_pool_count = 0;
@@ -63,7 +48,7 @@ void queue_init(void) {
 	calqueue_init();
 }
 
-void queue_insert(unsigned int receiver, unsigned int entity1, unsigned int entity2, interaction_f interaction, update_f update, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
+void insert_message(unsigned int receiver, unsigned int entity1, unsigned int entity2, interaction_f interaction, update_f update, simtime_t timestamp, unsigned int event_type, void *event_content, unsigned int event_size) {
 	msg_t *msg_ptr;
 
 	if (_thr_pool._thr_pool_count == THR_POOL_SIZE) {
@@ -96,11 +81,11 @@ void queue_insert(unsigned int receiver, unsigned int entity1, unsigned int enti
 	memcpy(msg_ptr->data, event_content, event_size);
 }
 
-double queue_pre_min(void) {
-	return _thr_pool.min_time;
+msg_t *get_min_timestamp_event(void) {
+	return calqueue_get();
 }
 
-double queue_deliver_msgs(void) {
+double flush_messages(void) {
 	msg_t *new_hole;
 	unsigned int i;
 	double mintime;
@@ -121,35 +106,4 @@ double queue_deliver_msgs(void) {
 	_thr_pool.min_time = INFTY;
 
 	return mintime;
-}
-
-msg_t *queue_min(void) {
-	//event_pool_node *node_ret;
-	msg_t *node_ret = NULL;
-
-	// Gets the minimum timestamp event from the queue
-	while (__sync_lock_test_and_set(&queue_lock, 1) == 1)
-		while (queue_lock);
-
-	node_ret = calqueue_get();
-	if (node_ret == NULL) {
-		printf("NULL\n");
-		current_time_vector[tid] = INFTY;
-		__sync_lock_release(&queue_lock);
-		return NULL;
-	}
-
-	current_time_vector[tid] = node_ret->timestamp;
-
-	__sync_lock_release(&queue_lock);
-
-	log_info(NC, "Get event with time %f\n", node_ret->timestamp);
-
-	execution_time(node_ret);
-
-	return node_ret;
-}
-
-void queue_destroy(void) {
-	free(_queue.head);
 }

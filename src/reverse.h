@@ -30,7 +30,6 @@ typedef struct _eras {
 	int last_free;		//! Index of the last available slot
 } eras;
 
-extern __thread revwin *current_revwin;	//! Represents the pointer to the current active reverse window
 
 /**
  * This will allocate a window on the HEAP of the exefutable file in order

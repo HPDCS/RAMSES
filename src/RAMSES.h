@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __ABM_H
-#define __ABM_H
+#ifndef __RAMSES_H
+#define __RAMSES_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -163,4 +163,4 @@ extern unsigned int FindRegion(int topology);
  */
 extern unsigned int GetTargetRegion(unsigned int region_id, unsigned int direction);
 
-#endif				/* __ABM_H */
+#endif	/* __RAMSES_H */

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <core.h>
-#include <ABM.h>
+#include <RAMSES.h>
 
 double *pmove;			// Probability matrix of each move (Source region by Destination region)
 unsigned int topology;
