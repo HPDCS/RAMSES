@@ -12,17 +12,12 @@
 #include "reverse.h"
 
 
-
-#define printf(...) {}
-#define putchar(...) {}
-
-
 __thread revwin *current_win = NULL;
 
-static __thread unsigned int revgen_count;	//! ??
+//~static __thread unsigned int revgen_count;	//! ??
 static __thread addrmap hashmap;	//! Map of the referenced addresses
 
-static void print_bits( long long number )
+/*static void print_bits( long long number )
 {
     unsigned long long mask = 0x8000000000000000; // 64 bit
     char digit;
@@ -32,7 +27,7 @@ static void print_bits( long long number )
 	putchar(digit);
         mask >>= 1 ;
     }
-}
+}*/
 
 
 /**
@@ -43,7 +38,7 @@ static void print_bits( long long number )
  */
 static inline void add_reverse_insn(revwin * win, unsigned char *bytes, size_t size) {
 	
-	int i;
+	//~int i;
 
 	// since the structure is used as a stack, it is needed to create room for the instruction
 	win->pointer = (void *)((char *)win->pointer - size);
@@ -56,9 +51,9 @@ static inline void add_reverse_insn(revwin * win, unsigned char *bytes, size_t s
 	}
 	// TODO: add timestamp conditional selector
 	
-	for(i = 0; i < size; i++)
-		printf("%02x ", bytes[i]);
-	printf("\n");
+	//~for(i = 0; i < size; i++)
+		//~printf("%02x ", bytes[i]);
+	//~printf("\n");
 
 	// copy the instructions to the heap
 	memcpy(win->pointer, bytes, size);
@@ -178,24 +173,13 @@ static inline void create_reverse_instruction(revwin * w, void *addr, uint64_t v
 		mov[0] = mov2[0] = 0xc7;
 		mov[1] = mov2[1] = 0x00;
 
-		printf("Valore: ");
-		print_bits(value);
-		printf("\n");
-		
-
 		least_significant_bits = (uint32_t) value;
-		printf("LSB: ");
-		print_bits(least_significant_bits);
-		printf("\n");
 
 		//mov[4] = (uint32_t) value;
 		memcpy(mov + 2, &least_significant_bits, 4);
 
 		// second part
 		least_significant_bits = (value >> 32) & 0x0FFFFFFFF;
-		printf("MSB: ");
-		print_bits(least_significant_bits);
-		printf("\n");
 		memcpy(mov2 + 2, &least_significant_bits, 4);
 		mov_size = 6;
 		break;
@@ -261,8 +245,8 @@ static inline int is_address_referenced(void *address) {
  */
 void reverse_code_generator(void *address, unsigned int size) {
 	uint64_t value;
-	double revgen_time;
-	timer reverse_instruction_generation;
+	//~double revgen_time;
+	//~timer reverse_instruction_generation;
 
 //	timer_start(reverse_instruction_generation);
 
@@ -293,7 +277,7 @@ void reverse_code_generator(void *address, unsigned int size) {
 		break;
 	}
 	
-	printf("reverse_code_generator at <%p> %d bytes value %lx\n", address, size, value);
+	//~printf("reverse_code_generator at <%p> %d bytes value %lx\n", address, size, value);
 
 	// now the idea is to generate the reverse MOV instruction that will
 	// restore the previous value 'value' stored in the memory address

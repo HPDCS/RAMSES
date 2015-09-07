@@ -9,10 +9,6 @@
 /// Recoverable memory state for LPs
 malloc_state **recoverable_state;
 
-/// Maximum number of malloc_areas allocated during the simulation. This variable is used
-/// for correctly restoring an LP's state whenever some areas are deallocated during the simulation.
-//int max_num_areas;
-
 void recoverable_init(void) {
 
 	register unsigned int i;

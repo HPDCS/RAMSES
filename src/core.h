@@ -1,7 +1,7 @@
 #ifndef __CORE_H
 #define __CORE_H
 
-#include <ABM.h>
+#include <RAMSES.h>
 
 #include <stdbool.h>
 #include <math.h>
@@ -18,6 +18,12 @@
 #define EXECUTION_EnvironmentInteraction	2
 #define EXECUTION_EnvironmentUpdate		3
 #define EXECUTION_Move				4
+
+/// Infinite timestamp: this is the highest timestamp in a simulation run
+#define INFTY DBL_MAX
+
+/// This defines the type with whom timestamps are represented
+typedef double simtime_t;
 
 #define UNION_CAST(x, destType) (((union {__typeof__(x) a; destType b;})x).b)
 
@@ -68,5 +74,26 @@ extern unsigned int n_cores;
 void thread_loop(void);
 
 extern void rootsim_error(bool fatal, const char *msg, ...);
+
+
+
+
+
+extern void init(void);
+extern void **states;
+extern simtime_t *processing;
+extern simtime_t *wait_time;
+extern unsigned int *wait_who;
+extern int *waiting_time_lock;
+extern bool *can_stop;
+extern bool stop;
+extern unsigned short int number_of_threads;
+extern int *region_lock;
+extern unsigned int rollbacks;
+extern unsigned int safe;
+extern unsigned int unsafe;
+
+
+
 
 #endif

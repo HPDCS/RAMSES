@@ -7,9 +7,6 @@
 #include "dymelor.h"
 #include "allocator.h"
 
-extern void *__real_malloc(size_t);
-extern void __real_free(void *);
-
 #define AUDIT if(0)
 
 mem_map maps[MAX_SOBJS];
@@ -46,7 +43,7 @@ void audit_map(unsigned int sobj) {
 	mdt_entry *mdte;
 	int i;
 
-	if ((sobj >= handled_sobjs)) {
+	if ((sobj >= (unsigned int)handled_sobjs)) {
 		printf("audit request on invalid sobj\n");
 		return;
 	}
@@ -248,6 +245,8 @@ void *pool_get_memory(unsigned int lid, size_t size) {
 }
 
 void pool_release_memory(unsigned int lid, void *ptr) {
+	(void)lid;
+	(void)ptr;
 	// TODO
 }
 
