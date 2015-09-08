@@ -5,6 +5,8 @@
 #include <core.h>
 #include <function_map.h>
 
+#include <timer.h>
+
 typedef struct _fmap {
 	void *original_address;
 	void *instrumented_address;
@@ -13,6 +15,11 @@ typedef struct _fmap {
 
 static fmap *function_map;
 static int num_functions;
+
+
+// Statis on event processing
+static timer event_timer;
+double fwd_time, rev_time;
 
 void initialize_map(int argc, char **argv, char **envp) {
 	char *prog_name;
@@ -136,8 +143,14 @@ void call_instrumented_function(msg_t * m) {
 	printf("Function at address '%p' not found!!\n", function);
 	fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
 	abort();
+
  do_call:
+ 	timer_start(event_timer);
 	call_it(function, m);
+	double elapsed = timer_value_micro(event_timer);
+
+	rev_time += elapsed;
+	rev_time /= 2;
 }
 
 void call_regular_function(msg_t * m) {
@@ -151,5 +164,11 @@ void call_regular_function(msg_t * m) {
 		printf("Unable to find function at address %p\n", function);
 		exit(EXIT_FAILURE);
 	}
+
+	timer_start(event_timer);
 	call_it(function, m);
+	double elapsed = timer_value_micro(event_timer);
+
+	fwd_time += elapsed;
+	fwd_time /= 2;
 }

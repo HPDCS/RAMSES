@@ -15,7 +15,7 @@ static timer simulation_stop;
 static init_f agent_initialization;
 static init_f region_initialization;
 
-
+extern double fwd_time, rev_time;
 
 static void process_init_event(void) {
 	unsigned int index;
@@ -53,6 +53,9 @@ void init(void) {
 
 	states = malloc(sizeof(void *) * (region_c + agent_c));
 	can_stop = malloc(sizeof(bool) * region_c);
+
+	// DEBUG
+	fwd_time = rev_time = 0;
 
 #ifndef NO_DYMELOR
 	dymelor_init();
@@ -238,6 +241,8 @@ void StartSimulation(unsigned short int app_n_thr) {
 	printf("Simulation finished\n");
 	printf("Overall time elapsed: %ld msec\n", timer_diff_micro(simulation_start, simulation_stop) / 1000);
 	printf("%d Safe events\n%d Unsafe event\n%d Rolled back events\n", safe, unsafe, rollbacks);
+	printf("Mean time to process safe events: %.3f usec\n", fwd_time);
+	printf("Mean time to process reversible events: %.3f usec\n", rev_time);
 	printf("======================================\n");
 }
 
