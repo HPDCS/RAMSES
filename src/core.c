@@ -63,6 +63,8 @@ unsigned int evt_count;
 
 extern void move(unsigned int agent, unsigned int destination);
 
+
+
 void rootsim_error(bool fatal, const char *msg, ...) {
 	char buf[1024];
 	va_list args;
@@ -85,15 +87,17 @@ void rootsim_error(bool fatal, const char *msg, ...) {
 
 
 static msg_t *fetch(void) {
-	unsigned int region;
-	simtime_t time;
-	simtime_t waiting_time;
-	msg_t *msg = NULL;
+	unsigned int region;		// Current region id the event belongs to
+	simtime_t time;				// Timestamp of the extracted event from the queue
+	simtime_t waiting_time;		// Minimum event's time who is waiting on the same region
+	msg_t *msg = NULL;			// The event itself
 
-	// Gets the minimum timestamp event from the queue
+	// Spin-lock on the queue
 	while (__sync_lock_test_and_set(&queue_lock, 1) == 1)
 		while (queue_lock);
 
+	// Gets the minimum timestamp event from the queue;
+	// if the message is null do nothing
 	msg = get_min_timestamp_event();
 	if (msg == NULL) {
 		printf("NULL\n");
@@ -109,8 +113,6 @@ static msg_t *fetch(void) {
 	log_info(NC, "Get event with time %f\n", msg->timestamp);
 
 	time = msg->timestamp;
-
-	// Gets the lock on the region
 	region = msg->receiver_id;
 //	printf("message: %p region: %d wait_who: %p\n", msg, region, wait_who);
 
@@ -121,24 +123,24 @@ static msg_t *fetch(void) {
 		// If the thread cannot acquire the lock, this means that another
 		// one is performing an event on that region; it has to register
 		// its event's timestamp on the waiting queue, if and only if that
-		// time is less then the possible already registerd one.
+		// time is less then the one already registred, if any.
 
+		// Spin-lock on the waiting-time queue in order to register the new wait_time
 		while (__sync_lock_test_and_set(&waiting_time_lock[region], 1) == 1)
 			while (waiting_time_lock[region]) ;
 
 		waiting_time = wait_time[region];
 
+		// This thread will register itsel on the waiting_time queue of and only if it's
+		// the one holding event with a time less than the one altready registere, if any
 		if (time < waiting_time || (time == waiting_time && tid < wait_who[region])) {
-
 			wait_time[region] = time;
 			wait_who[region] = tid;
 		}
 
 		__sync_lock_release(&waiting_time_lock[region]);
 
-		// Spins over the wait_who until the current event time is grater
-		// than the waiting one
-
+		// Othrewise, it spins until the current event time is grater than the waiting one
 		while ((time > waiting_time) || (time == waiting_time && wait_who[region] < tid)) {
 			waiting_time = wait_time[region];
 		}
@@ -146,14 +148,23 @@ static msg_t *fetch(void) {
 		goto retry;
 
 	}
-	log_info(NC, "Lock on region %d acquired by event %f\n", region, time);
 
+	// Here this thread has correctly acquired the lock on the region
+	log_info(NC, "Lock on region %d acquired by event %f\n", region, time);
 
 	return msg;
 }
 
-
-int check_safety(simtime_t time) {
+/**
+ * Check whether there is an event's timestamp on the processing queue
+ * that has a less timestamp with respect to the one the current thread
+ * is carrying, namely with time <em>time</em>.
+ *
+ * @param time The timestamp of the event to check
+ *
+ * @return 1 if the time <em>time</em> is safe, 0 otherwise
+ */
+static int check_safety(simtime_t time) {
 	unsigned int i;
 
 	for (i = 0; i < n_cores; i++) {
@@ -167,25 +178,36 @@ int check_safety(simtime_t time) {
 	return 1;
 }
 
-bool check_waiting(simtime_t time) {
+/**
+ * Check whether there is an event waiting to the current region with a timestamp
+ * which is less the one passed as argument <em>time</em>
+ *
+ * @param time The timestamp of the event to check
+ *
+ * @return true if there is an minor event waiting, 0 otherwise
+ */
+static bool check_waiting(simtime_t time) {
 	// Check for thread with less event's timestamp
 //      log_info(PURPLE, "Event %f is checking if someone else has priority on region %d (%f)\n", time, current_lp, wait_time[current_lp] == INFTY ? -1 : wait_time[current_lp]);
 	return (wait_time[current_lp] < time || (wait_time[current_lp] == time && tid > wait_who[current_lp]));
 }
 
-void flush(msg_t * msg) {
+static void flush(msg_t * msg) {
 	unsigned int region;
 
 	log_info(NC, "Flushing event at time %f\n", current_lvt);
 
+	// Spin-lock on the queue in order to flush the message
 	while (__sync_lock_test_and_set(&queue_lock, 1) == 1)
 		while (queue_lock) ;
 
 	region = msg->receiver_id;
 
+	// Spin-lock on the waiting_time queue in order to ....
 	while (__sync_lock_test_and_set(&waiting_time_lock[region], 1) == 1)
 		while (region_lock[region]) ;
 
+	// 
 	if(wait_who[region] == tid) {
 		wait_time[region] = INFTY;
 		wait_who[region] = n_cores;
@@ -198,7 +220,6 @@ void flush(msg_t * msg) {
 	flush_messages();
 
 //      log_info(NC, "Vector status: outgoing=%f\n", t_min);
-
 //      log_info(NC, "Lock on region %d released by event %f\n", region, time);
 
 	__sync_lock_release(&queue_lock);
