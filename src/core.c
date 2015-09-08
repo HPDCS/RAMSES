@@ -127,11 +127,11 @@ static msg_t *fetch(void) {
 
 		// Spin-lock on the waiting-time queue in order to register the new wait_time
 		while (__sync_lock_test_and_set(&waiting_time_lock[region], 1) == 1)
-			while (waiting_time_lock[region]) ;
+			while (waiting_time_lock[region]);
 
 		waiting_time = wait_time[region];
 
-		// This thread will register itsel on the waiting_time queue of and only if it's
+		// This thread will register itself on the waiting_time queue of and only if it's
 		// the one holding event with a time less than the one altready registere, if any
 		if (time < waiting_time || (time == waiting_time && tid < wait_who[region])) {
 			wait_time[region] = time;
@@ -144,6 +144,13 @@ static msg_t *fetch(void) {
 		while ((time > waiting_time) || (time == waiting_time && wait_who[region] < tid)) {
 			waiting_time = wait_time[region];
 		}
+
+		// If this line is touched, no other thread with an event's timestamp less
+		// than the current one is waiting, or no thread with an event's timestamp
+		// having the same time of the current one but a less thread id.
+		
+		// Therefore try again to acquire the lock on the region, since no other thread has
+		// registered on the waiting_time queue.
 
 		goto retry;
 
@@ -203,11 +210,14 @@ static void flush(msg_t * msg) {
 
 	region = msg->receiver_id;
 
-	// Spin-lock on the waiting_time queue in order to ....
+	// Spin-lock on the waiting_time queue in order to atomically modify
+	// the waiting_time queue
 	while (__sync_lock_test_and_set(&waiting_time_lock[region], 1) == 1)
-		while (region_lock[region]) ;
+		while (waiting_time_lock[region]) ;
 
-	// 
+	// If i'm the thread currently registered on the waiting_time queue
+	// this mean that i'm in charge to reset the values in order to allow
+	// subsequent thread to register as well, since now i'm in the commit phase
 	if(wait_who[region] == tid) {
 		wait_time[region] = INFTY;
 		wait_who[region] = n_cores;
