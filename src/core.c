@@ -309,7 +309,7 @@ void thread_loop(void) {
 		}
 
 		flush(current_m);
-		__sync_lock_release(&wait_who[current_m->receiver_id]);
+		__sync_lock_release(&region_lock[current_m->receiver_id]);
 		free(current_m);
 
 		if (tid == 0) {
