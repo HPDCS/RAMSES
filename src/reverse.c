@@ -14,6 +14,15 @@
 
 __thread revwin *current_win = NULL;
 
+
+// Variables to hold the emulated stack window on the heap
+// used to reverse the event without affecting the actual stack;
+// This is needed since the reverse-MOVs could overwrite portions
+// of what was the function's stack in the past event processing.
+__thread void *original_stack = NULL;
+__thread void *stack = NULL;
+
+
 //~static __thread unsigned int revgen_count;	//! ??
 static __thread addrmap hashmap;	//! Map of the referenced addresses
 
@@ -88,7 +97,7 @@ static inline revwin *allocate_reverse_window(size_t size) {
 	revwin *win = malloc(sizeof(revwin));
 	current_win = win;
 	if (win == NULL) {
-		perror("Out of memroy!");
+		perror("Out of memory!");
 		abort();
 	}
 
@@ -103,8 +112,27 @@ static inline revwin *allocate_reverse_window(size_t size) {
 
 	initialize_revwin(win);
 
+	/**
+	 * Allocate a new stack window in order to not modify anything
+	 * on the real one, otherwise during the reversible undo event
+	 * processing, the old stack will overwrite the current one which
+	 * collide with the execute_undo_event() function
+	 */
+
+	// Allocate 1024 bytes for a limited memory which emulates
+	// the future stack of the execute_undo_event()'s stack
+	// TODO: da sistemare!!!!
+	stack = malloc(EMULATED_STACK_SIZE);
+	if(stack == NULL) {
+		perror("Out of memory!");
+		abort();
+	}
+	// The stack grows towards low addresses
+	stack += (EMULATED_STACK_SIZE - 1); 
+
 	return win;
 }
+
 
 /**
  * Private function used to create the new reversed MOV instruction and
@@ -277,7 +305,7 @@ void reverse_code_generator(void *address, unsigned int size) {
 		break;
 	}
 	
-	//~printf("reverse_code_generator at <%p> %d bytes value %lx\n", address, size, value);
+	//~printf("reverse_code_generator at <%p> %d bytes value %#08lx\n", address, size, value);
 
 	// now the idea is to generate the reverse MOV instruction that will
 	// restore the previous value 'value' stored in the memory address
@@ -292,7 +320,7 @@ void *create_new_revwin(size_t size) {
 
 void reset_window(void *w) {
 	revwin *win = (revwin *) w;
-	win->pointer = ((char *)win->address + win->size);
+	win->pointer = ((char *)win->address + win->size - 1);
 	initialize_revwin(win);
 }
 
@@ -312,8 +340,22 @@ void execute_undo_event(void *w) {
 	revwin *win = (revwin *) w;
 	void *revcode;
 
+
 	add_reverse_insn(w, &push, 1);
 
+	// Temporary swaps the stack pointer to use
+	// the emulated one on the heap, instead
+
+	// Save the original stack pointer into 'original_stack'
+	// and substitute $RSP the new emulated stack pointer
+	__asm__ volatile ("movq %%rsp, %0\n\t"
+					  "movq %1, %%rsp" : "=m" (original_stack) : "m" (stack));
+
+
+	// Calls the reversing function
 	revcode = win->pointer;
 	((void (*)(void))revcode) ();
+
+	// Replace the original stack on the relative register
+	__asm__ volatile ("movq %0, %%rsp" : : "m" (original_stack));
 }

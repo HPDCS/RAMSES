@@ -10,6 +10,8 @@
 #define HMAP_OFFSET_MASK	0x3f	//! Least significant 6 bits are used to intercept address presence
 #define HMAP_OFF_MASK_SIZE	6
 
+#define EMULATED_STACK_SIZE 1024	//! Default size of the emultated reverse stack window on the heap space
+
 typedef struct _revwin {
 	int size;		//! The actual size of the reverse window
 	int flags;		//! Creation flags
@@ -30,6 +32,14 @@ typedef struct _eras {
 	int last_free;		//! Index of the last available slot
 } eras;
 
+// Emulated stack window descriptor
+typedef struct _stackwin {
+	void *base;			// Base of the stack
+	void *pointer;		// Current top pointer
+	size_t size;		// Size of the window
+	void *original_base;		// Origninal base pointer of the real stack
+	void *original_pointer;		// Original stack pointer of the real one
+} stackwin;
 
 /**
  * This will allocate a window on the HEAP of the exefutable file in order

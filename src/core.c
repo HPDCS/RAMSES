@@ -316,7 +316,7 @@ void thread_loop(void) {
 					// If some other thread is wating with a less event's timestp,
 					// then run a rollback and exit
 					if (check_waiting(current_m->timestamp) == 1) {
-						log_info(YELLOW, "Event at time %f must be undone: revesing...\n", current_m->timestamp);
+						log_info(YELLOW, "Event at time %f must be undone: reversing...\n", current_m->timestamp);
 
 						rollbacks++;
 						if (current_m->type == EXECUTION_Move) {
@@ -328,6 +328,8 @@ void thread_loop(void) {
 						}
 
 						execute_undo_event(window);
+
+						log_info(YELLOW, "Event at time %f has been reversed successfully\n");
 
 						reset_outgoing_msg();
 						__sync_lock_release(&region_lock[current_m->receiver_id]);
