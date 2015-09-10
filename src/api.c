@@ -66,7 +66,7 @@ void init(void) {
 	
 	processing = malloc(sizeof(simtime_t) * n_cores);
 	wait_time = malloc(sizeof(simtime_t) * region_c);
-	wait_who = malloc(sizeof(simtime_t) * region_c);
+	wait_who = malloc(sizeof(int) * region_c);
 	waiting_time_lock = malloc(sizeof(int) * region_c);
 	region_lock = malloc(sizeof(int) * region_c);
 
@@ -75,12 +75,10 @@ void init(void) {
 	}
 
 	for (i = 0; i < region_c; i++) {
-		wait_time[i] = INFTY;
-	}
-
-	for (i = 0; i < region_c; i++) {
 		waiting_time_lock[i] = 0;
-		wait_who[i] = 0;
+		region_lock[i] = 0;
+		wait_time[i] = INFTY;
+		wait_who[i] = n_cores;
 	}
 
 }
@@ -216,6 +214,23 @@ void StartSimulation(unsigned short int app_n_thr) {
 
 	n_cores = app_n_thr;
 
+	// Final initialization of processes
+	init();
+	// TODO: da integrare process_init_event() in init()
+	process_init_event();
+
+	printf("INFO: Setting up regions and agents...\n");
+
+	// TODO: da integrare in process_init_event()
+	// Check whether agents' position has been properly initialized by InitialPosition invocation
+	for (i = 0; i < agent_c; i++) {
+		if (agent_position[i] == UINT_MAX) {
+			// Agent has no position set up, discard it
+			rootsim_error(false, "Agent %d has no initial position set up; it will be disposed\n");
+			states[i] = NULL;	// TODO: da stabilire come procedere
+		}
+	}
+
 	// Start timer
 	timer_start(simulation_start);
 
@@ -295,18 +310,20 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 	region_initialization = region_init;
 	agent_initialization = agent_init;
 
-	init();
-	process_init_event();
+	// init();
+	// // TODO: da integrare process_init_event() in init()
+	// process_init_event();
 
-	printf("INFO: Setting up regions and agents...\n");
+	// printf("INFO: Setting up regions and agents...\n");
 
-	// Check whether agents' position has been properly initialized by InitialPosition invocation
-	for (i = 0; i < agent_c; i++) {
-		if (agent_position[i] == UINT_MAX) {
-			// Agent has no position set up, discard it
-			rootsim_error(false, "Agent %d has no initial position set up; it will be disposed\n");
-			states[i] = NULL;	// TODO: da stabilire come procedere
-		}
-	}
+	// // TODO: da integrare in process_init_event()
+	// // Check whether agents' position has been properly initialized by InitialPosition invocation
+	// for (i = 0; i < agent_c; i++) {
+	// 	if (agent_position[i] == UINT_MAX) {
+	// 		// Agent has no position set up, discard it
+	// 		rootsim_error(false, "Agent %d has no initial position set up; it will be disposed\n");
+	// 		states[i] = NULL;	// TODO: da stabilire come procedere
+	// 	}
+	// }
 
 }

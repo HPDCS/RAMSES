@@ -41,8 +41,8 @@ typedef double simtime_t;
 	fflush(stdout);\
 	} while(0);
 
-#define log_info(color, ...) do_log_info(color, __VA_ARGS__)
-//#define log_info(color, ...) {}
+//#define log_info(color, ...) do_log_info(color, __VA_ARGS__)
+#define log_info(color, ...) {}
 
 typedef struct __msg_t {
 	unsigned int sender_id;

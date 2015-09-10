@@ -46,7 +46,7 @@ unsigned int region_c = 0;
 unsigned int *agent_position;
 bool **presence_matrix;		// Rows are cells, columns are agents
 
-__thread simtime_t current_lvt = 0;
+__thread simtime_t current_lvt = 0;		/// Represents the current event's time
 __thread unsigned int current_lp = 0;	/// Represents the region's id
 __thread unsigned int tid = 0;	/// Logical id of the worker thread (may be different from the region's id)
 
@@ -127,7 +127,7 @@ static msg_t *fetch(void) {
 
 		// Spin-lock on the waiting-time queue in order to register the new wait_time
 		while (__sync_lock_test_and_set(&waiting_time_lock[region], 1) == 1)
-			while (waiting_time_lock[region]);
+			while (waiting_time_lock[region]) ;
 
 		waiting_time = wait_time[region];
 
@@ -136,6 +136,8 @@ static msg_t *fetch(void) {
 		if (time < waiting_time || (time == waiting_time && tid < wait_who[region])) {
 			wait_time[region] = time;
 			wait_who[region] = tid;
+
+			log_info(NC, "Thread %d registered event %f on waiting queue for region %d\n", tid, time, region);
 		}
 
 		__sync_lock_release(&waiting_time_lock[region]);
@@ -216,12 +218,17 @@ static void flush(msg_t * msg) {
 		while (waiting_time_lock[region]) ;
 
 	// If i'm the thread currently registered on the waiting_time queue
-	// this mean that i'm in charge to reset the values in order to allow
-	// subsequent thread to register as well, since now i'm in the commit phase
+	// this mean that i'm in charge to reset these values in order to allow
+	// following threads to register as well, since now i'm in the commit phase
+	// thereby i'm "released" the resources
 	if(wait_who[region] == tid) {
 		wait_time[region] = INFTY;
 		wait_who[region] = n_cores;
 	}
+
+
+	// DO NOT update processing to prevent possible deadlocks
+	// on inconsistent values when the threads exits its main loop
 
 	__sync_lock_release(&waiting_time_lock[region]);
 	
@@ -336,7 +343,7 @@ void thread_loop(void) {
 				}
 			}
 
-			log_info(NC, "Reverse window has been released\n");
+			//log_info(NC, "Reverse window has been released\n");
 		}
 
 		flush(current_m);
@@ -351,6 +358,19 @@ void thread_loop(void) {
 				printf("TIME: %f\n", current_lvt);
 		}
 	}
+
+	// Processing vector will be definetively reset only when a thread
+	// finishes its main loop. In that case the reset prevents possible
+	// deadlocks deriving from old an yet unconsistent values with respect
+	// to the others thread still running and waiting for the actual event's
+	// time to be reset.
+	//==========================================================================
+	// NOTE that processing value will be updated with a new event's time
+	// at each fetch() operation!! This is done to prevent that an event Ex
+	// at time X would generate a second event Ey with time Y<X which is still
+	// less than a third executing event Ez with time Z>Y. Otherwise a possible
+	// causal inconsistency would arise by commiting Ez before Ey.
+	// =========================================================================
 
 	// Reset the processing time
 	processing[tid] = INFTY;

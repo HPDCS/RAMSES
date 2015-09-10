@@ -361,5 +361,5 @@ void execute_undo_event(void *w) {
 
 
 	// Reset the reverse window
-	reset_window();
+	reset_window(w);
 }
