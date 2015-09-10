@@ -358,4 +358,8 @@ void execute_undo_event(void *w) {
 
 	// Replace the original stack on the relative register
 	__asm__ volatile ("movq %0, %%rsp" : : "m" (original_stack));
+
+
+	// Reset the reverse window
+	reset_window();
 }

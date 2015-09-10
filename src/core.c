@@ -116,7 +116,7 @@ static msg_t *fetch(void) {
 	region = msg->receiver_id;
 //	printf("message: %p region: %d wait_who: %p\n", msg, region, wait_who);
 
-	log_info(NC, "Event with time %f tring to acquired lock on region %d\n", time, region);
+//	log_info(NC, "Event with time %f tring to acquired lock on region %d\n", time, region);
 
  retry:
 	if (__sync_lock_test_and_set(&region_lock[region], 1) == 1) {
@@ -280,8 +280,6 @@ void thread_loop(void) {
 			} else
 				call_regular_function(current_m);
 
-			log_info(NC, "Event at time %f has been processed\n", current_lvt);
-
 #ifdef FINE_GRAIN_DEBUG
 			__sync_fetch_and_add(&non_transactional_ex, 1);
 #endif
@@ -307,7 +305,7 @@ void thread_loop(void) {
 			log_info(NC, "Event %f waits for commit\n", current_m->timestamp);
 
 			while (1) {
-				// If the event is not yet safe continue to retry it safety
+				// If the event is not yet safe continue to retry
 				// hoping that commit horizion eventually will progress
 				if (check_safety(current_lvt) == 1) {
 					log_info(GREEN, "Event at time %f has became safe: flushing...\n", current_m->timestamp);
@@ -329,7 +327,7 @@ void thread_loop(void) {
 
 						execute_undo_event(window);
 
-						log_info(YELLOW, "Event at time %f has been reversed successfully\n");
+						log_info(YELLOW, "Event at time %f has been reversed successfully\n", current_m->timestamp);
 
 						reset_outgoing_msg();
 						__sync_lock_release(&region_lock[current_m->receiver_id]);
@@ -345,6 +343,8 @@ void thread_loop(void) {
 		__sync_lock_release(&region_lock[current_m->receiver_id]);
 		free(current_m);
 
+		log_info(NC, "Event at time %f has been processed\n", current_lvt);
+
 		if (tid == 0) {
 			evt_count++;
 			if ((evt_count - 100 * (evt_count / 100)) == 0)
@@ -352,6 +352,7 @@ void thread_loop(void) {
 		}
 	}
 
+	// Reset the processing time
 	processing[tid] = INFTY;
 
 #ifdef FINE_GRAIN_DEBUG

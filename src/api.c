@@ -240,7 +240,7 @@ void StartSimulation(unsigned short int app_n_thr) {
 	printf("======================================\n");
 	printf("Simulation finished\n");
 	printf("Overall time elapsed: %ld msec\n", timer_diff_micro(simulation_start, simulation_stop) / 1000);
-	printf("%d Safe events\n%d Unsafe event\n%d Rolled back events\n", safe, unsafe, rollbacks);
+	printf("%d Safe events\n%d Unsafe event\n%d Rollback\n", safe, unsafe, rollbacks);
 	printf("Mean time to process safe events: %.3f usec\n", fwd_time);
 	printf("Mean time to process reversible events: %.3f usec\n", rev_time);
 	printf("======================================\n");

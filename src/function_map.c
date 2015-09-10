@@ -131,7 +131,7 @@ void call_instrumented_function(msg_t * m) {
 		printf("Event type = %d\n", m->type);
 		exit(EXIT_FAILURE);
 	}
-	log_info(NC, "Finding function at address '%p'\n", function);
+	//log_info(NC, "Finding function at address '%p'\n", function);
 
 	// Find the instrumented function
 	for (i = 0; i < num_functions; i++) {
