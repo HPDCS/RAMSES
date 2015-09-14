@@ -282,7 +282,7 @@ void thread_loop(void) {
 			log_info(CYAN, "Event at time %f is safe\n", current_lvt);
 
 			if (type == EXECUTION_Move) {
-				current = agent_position[current_m->receiver_id];
+				current = agent_position[current_m->entity1];
 				move(current_m->entity1, current_m->receiver_id);
 			} else
 				call_regular_function(current_m);
@@ -300,7 +300,7 @@ void thread_loop(void) {
 			reset_window(window);
 
 			if (type == EXECUTION_Move) {
-				current = agent_position[current_m->receiver_id];
+				current = agent_position[current_m->entity1];
 				move(current_m->entity1, current_m->receiver_id);
 			} else {
 				call_instrumented_function(current_m);

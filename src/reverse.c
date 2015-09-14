@@ -258,8 +258,13 @@ static inline int is_address_referenced(void *address) {
 	// if the address is not reference yet, insert it and return 0 (false)
 	if ((hashmap.map[idx] >> offset) == 0) {
 		hashmap.map[idx] |= (1 << offset);
+
+		//printf("Address %llx :: idx=%llx, offset=%llx => PRESENT\n", address, idx, offset);
+
 		return 0;
 	}
+
+	//printf("Address %llx :: idx=%llx, offset=%llx => NOT PRESENT\n", address, idx, offset);
 
 	return 1;
 }

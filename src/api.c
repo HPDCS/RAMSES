@@ -88,8 +88,9 @@ void InitialPosition(unsigned int region) {
 
 //	printf("INFO: agent %d set in region %d\n", current_lp, region);
 
+	// NOTE:
 	// At this time, current_lp holds the current agent that is
-	// being initialized dureing the setup phase.
+	// being initialized during the setup phase.
 	agent_position[current_lp] = region;
 	presence_matrix[region][current_lp] = true;
 }
