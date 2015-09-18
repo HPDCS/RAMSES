@@ -17,9 +17,9 @@ static fmap *function_map;
 static int num_functions;
 
 
-// Statis on event processing
-static timer event_timer;
-double fwd_time, rev_time;
+// Statics on event processing
+double fwd_time = 0.0, rev_time = 0.0;
+unsigned int rev_count = 0, fwd_count = 0;
 
 void initialize_map(int argc, char **argv, char **envp) {
 	char *prog_name;
@@ -122,6 +122,9 @@ static void call_it(void *f, msg_t * m) {
 void call_instrumented_function(msg_t * m) {
 	void *function = NULL;
 	int i;
+
+	timer event_timer;
+
 	if (m->interaction != NULL) {
 		function = m->interaction;
 	} else if (m->update != NULL) {
@@ -150,11 +153,14 @@ void call_instrumented_function(msg_t * m) {
 	double elapsed = timer_value_micro(event_timer);
 
 	rev_time += elapsed;
-	rev_time /= 2;
+	rev_count++;
 }
 
 void call_regular_function(msg_t * m) {
 	void *function = NULL;
+
+	timer event_timer;
+
 	if (m->interaction != NULL) {
 		function = m->interaction;
 	} else if (m->update != NULL) {
@@ -170,5 +176,5 @@ void call_regular_function(msg_t * m) {
 	double elapsed = timer_value_micro(event_timer);
 
 	fwd_time += elapsed;
-	fwd_time /= 2;
+	fwd_count++;
 }

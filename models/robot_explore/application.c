@@ -318,7 +318,7 @@ static void print_result() {
 	for (agent_id = 0; agent_id < number_of_agents; agent_id++) {
 		agent = GetAgentState(agent_id);
 
-		printf("Robot %d: %.02f percent (%d / %d regions) --- %d meetings so far --- currently in cell %d\n", agent_id, (double)agent->visited_cells / number_of_regions * 100, agent->visited_cells, number_of_regions, agent->met_robots, agent->current_cell);
+		printf("Robot %d: %.02f\% (%d / %d regions) --- %d meetings so far --- currently in cell %d\n", agent_id, (double)agent->visited_cells / number_of_regions * 100, agent->visited_cells, number_of_regions, agent->met_robots, agent->current_cell);
 	}
 }
 

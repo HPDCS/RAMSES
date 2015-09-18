@@ -23,6 +23,19 @@ __thread void *original_stack = NULL;
 __thread void *stack = NULL;
 
 
+// STATISTICS
+double reverse_generation_time = 0.0;
+double reverse_execution_time = 0.0;
+
+unsigned int reverse_block_generated = 0;
+unsigned int reverse_block_executed = 0;
+
+unsigned int countb = 0;
+unsigned int countw = 0;
+unsigned int countl = 0;
+unsigned int countq = 0;
+
+
 //~static __thread unsigned int revgen_count;	//! ??
 static __thread addrmap hashmap;	//! Map of the referenced addresses
 
@@ -172,6 +185,7 @@ static inline void create_reverse_instruction(revwin * w, void *addr, uint64_t v
 		//mov[2] = (uint8_t) value;
 		memcpy(mov + 2, &value, 1);
 		mov_size = 3;
+		countb++;
 		break;
 
 	case 2:		// WORD
@@ -182,6 +196,7 @@ static inline void create_reverse_instruction(revwin * w, void *addr, uint64_t v
 		//mov[3] = (uint16_t) value;
 		memcpy(mov + 3, &value, 2);
 		mov_size = 5;
+		countw++;
 		break;
 
 	case 4:		// LONG-WORD
@@ -191,6 +206,7 @@ static inline void create_reverse_instruction(revwin * w, void *addr, uint64_t v
 		//mov[2] = (uint32_t) value;
 		memcpy(mov + 2, &value, 4);
 		mov_size = 6;
+		countl++;
 		break;
 
 	case 8:		// QUAD-WORD
@@ -210,6 +226,7 @@ static inline void create_reverse_instruction(revwin * w, void *addr, uint64_t v
 		least_significant_bits = (value >> 32) & 0x0FFFFFFFF;
 		memcpy(mov2 + 2, &least_significant_bits, 4);
 		mov_size = 6;
+		countq++;
 		break;
 
 	default:
@@ -279,9 +296,9 @@ static inline int is_address_referenced(void *address) {
 void reverse_code_generator(void *address, unsigned int size) {
 	uint64_t value;
 	//~double revgen_time;
-	//~timer reverse_instruction_generation;
+	timer reverse_instruction_generation;
 
-//	timer_start(reverse_instruction_generation);
+	timer_start(reverse_instruction_generation);
 
 	// check if the address is already be referenced, in that case it is not necessary
 	// to compute again the reverse instruction, since the former MOV is the one
@@ -316,6 +333,9 @@ void reverse_code_generator(void *address, unsigned int size) {
 	// restore the previous value 'value' stored in the memory address
 	// based on the operand size selects the proper MOV instruction bytes
 	create_reverse_instruction(current_win, address, value, size);
+
+	reverse_generation_time += timer_value_micro(reverse_instruction_generation);
+	reverse_block_generated++;
 }
 
 void *create_new_revwin(size_t size) {
@@ -325,8 +345,12 @@ void *create_new_revwin(size_t size) {
 
 void reset_window(void *w) {
 	revwin *win = (revwin *) w;
-	win->pointer = ((char *)win->address + win->size - 1);
-	initialize_revwin(win);
+	//win->pointer = ((char *)win->address + win->size - 1);
+	
+	win->pointer = ((char *)win->address + win->size - 3);
+
+	bzero(&hashmap.map, sizeof(hashmap.map));
+	//initialize_revwin(win);
 }
 
 void free_revwin(void *w) {
@@ -345,7 +369,11 @@ void execute_undo_event(void *w) {
 	revwin *win = (revwin *) w;
 	void *revcode;
 
+	timer reverse_block_timer;
 
+	timer_start(reverse_block_timer);
+
+	// Add the complementary push %rax instruction to the top
 	add_reverse_insn(w, &push, 1);
 
 	// Temporary swaps the stack pointer to use
@@ -364,7 +392,9 @@ void execute_undo_event(void *w) {
 	// Replace the original stack on the relative register
 	__asm__ volatile ("movq %0, %%rsp" : : "m" (original_stack));
 
+	reverse_execution_time += timer_value_micro(reverse_block_timer);
+	reverse_block_executed++;
 
 	// Reset the reverse window
-	reset_window(w);
+	//reset_window(w);
 }

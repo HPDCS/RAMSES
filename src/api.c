@@ -16,6 +16,20 @@ static init_f agent_initialization;
 static init_f region_initialization;
 
 extern double fwd_time, rev_time;
+extern unsigned int fwd_count, rev_count;
+
+////////////////////////////
+extern unsigned int countb;
+extern unsigned int countw;
+extern unsigned int countl;
+extern unsigned int countq;
+
+extern double reverse_generation_time;
+extern double reverse_execution_time;
+
+extern unsigned int reverse_block_generated;
+extern unsigned int reverse_block_executed;
+////////////////////////////
 
 static void process_init_event(void) {
 	unsigned int index;
@@ -256,10 +270,16 @@ void StartSimulation(unsigned short int app_n_thr) {
 	printf("======================================\n");
 	printf("Simulation finished\n");
 	printf("Overall time elapsed: %ld msec\n", timer_diff_micro(simulation_start, simulation_stop) / 1000);
-	printf("%d Safe events\n%d Unsafe event\n%d Rollback\n", safe, unsafe, rollbacks);
-	printf("Mean time to process safe events: %.3f usec\n", fwd_time);
-	printf("Mean time to process reversible events: %.3f usec\n", rev_time);
+	printf("%d Safe attempts\n%d Unsafe attempts\n%d Rollback\n\n", safe, unsafe, rollbacks);
+	
+	printf("Time processing safe events: %.3f usec on %d events (%.3f usec per event)\n", fwd_time, fwd_count, fwd_time/fwd_count);
+	printf("Time executing undo blocks : %.3f usec on %d reversible events (%.3f usec per event)\n\n", rev_time, rev_count, rev_time/rev_count);
+	
+	printf("Time to generate a reverse_undo_block = %.3f usec on %d blocks generated (%.3f usec per block)\n", reverse_generation_time, reverse_block_generated, reverse_generation_time/reverse_block_generated);
+	printf("Time to execute a reverse_undo_block = %.3f usec on %d blocks executed (%.3f usec per block)\n", reverse_execution_time, reverse_block_executed, reverse_execution_time/reverse_block_executed);
+	//printf("movb = %d\nmovw = %d\nmovl = %d\nmovq = %d\n", countb, countw, countl, countq);
 	printf("======================================\n");
+
 }
 
 void StopSimulation(void) {
