@@ -16,6 +16,7 @@
 #include "core.h"
 #include "message.h"
 #include "function_map.h"
+#include "calqueue.h"
 
 #include "reverse.h"
 
@@ -348,7 +349,7 @@ void thread_loop(void) {
 
 		flush(current_m);
 		__sync_lock_release(&region_lock[current_m->receiver_id]);
-		free(current_m);
+		calqueue_free(current_m);
 
 		log_info(NC, "Event at time %f has been processed\n", current_lvt);
 

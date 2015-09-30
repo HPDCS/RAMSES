@@ -7,13 +7,14 @@
 #define MAXNBUCKETS 32768	// Maximum number of buckets in calendar queue
 
 typedef struct __calqueue_node {
-	double timestamp;	// Timestamp associated to the event
-	void *payload;		// A pointer to the actual content of the node
+	double timestamp;		// Timestamp associated to the event
 	struct __calqueue_node *next;	// Pointers to other nodes
+	unsigned char payload[];	// Actual buffer keeping the payload
 } calqueue_node;
 
 extern void calqueue_init(void);
 extern void *calqueue_get(void);
-extern void calqueue_put(double, void *);
+extern void calqueue_free(void *ptr);
+extern void calqueue_insert(double timestamp, void *payload, size_t size);
 
 #endif				/* __CALQUEUE_H */

@@ -91,9 +91,9 @@ double flush_messages(void) {
 	double mintime;
 
 	for (i = 0; i < _thr_pool._thr_pool_count; i++) {
-		new_hole = malloc(sizeof(msg_t));
-		memcpy(new_hole, &_thr_pool.messages[i], sizeof(msg_t));
-		calqueue_put(new_hole->timestamp, new_hole);
+		// calqueue_insert makes a copy of the buffer
+		new_hole = &_thr_pool.messages[i];
+		calqueue_insert(new_hole->timestamp, new_hole, sizeof(msg_t));
 	}
 
 	if (i == 0) {

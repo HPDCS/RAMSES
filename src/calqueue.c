@@ -5,8 +5,14 @@
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "calqueue.h"
+
+// To find the container structure of a node
+#define container_of(ptr, type, member) ({ \
+                const __typeof__( ((type *)0)->member ) *__mptr = (ptr); \
+                (type *)( (char *)__mptr - offsetof(type,member) );})
 
 // Declare data structures needed for the schedulers
 static calqueue_node *calq[CALQSPACE];	// Array of linked lists of items
@@ -20,6 +26,7 @@ static double top_threshold, bot_threshold, lastprio;
 static double buckettop, cwidth;
 
 static calqueue_node *calqueue_deq(void);
+static void calqueue_put(double timestamp, calqueue_node *new_node);
 
 /* This initializes a bucket array within the array a[].
    Bucket width is set equal to bwidth. Bucket[0] is made
@@ -105,7 +112,7 @@ static double new_width(void) {
 	j = 0;
 
 	// Re-insert temp node 0
-	calqueue_put(temp[0]->timestamp, temp[0]->payload);
+	calqueue_put(temp[0]->timestamp, temp[0]);
 
 	// Recalculate ignoring large separations
 	for (i = 1; i < nsamples; i++) {
@@ -113,14 +120,7 @@ static double new_width(void) {
 			newaverage += (temp[i]->timestamp - temp[i - 1]->timestamp);
 			j++;
 		}
-		calqueue_put(temp[i]->timestamp, temp[i]->payload);
-	}
-
-	// Free the temp structure (the events have been re-injected in the queue)
-	for (i = 0; i < 25; i++) {
-		if (temp[i] != NULL) {
-			free(temp[i]);
-		}
+		calqueue_put(temp[i]->timestamp, temp[i]);
 	}
 
 	// Compute new width
@@ -164,9 +164,8 @@ static void resize(int newsize) {
 	for (i = oldnbuckets - 1; i >= 0; --i) {
 		temp = oldcalendar[i];
 		while (temp != NULL) {
-			calqueue_put(temp->timestamp, temp->payload);
+			calqueue_put(temp->timestamp, temp);
 			temp2 = temp->next;
-			free(temp);
 			temp = temp2;
 		}
 	}
@@ -244,15 +243,12 @@ void calqueue_init(void) {
 	resize_enabled = true;
 }
 
-void calqueue_put(double timestamp, void *payload) {
+static void calqueue_put(double timestamp, calqueue_node *new_node) {
 
 	int i, i_top;
-	calqueue_node *new_node, *traverse;
+	calqueue_node *traverse;
 
-	// Fill the node entry
-	new_node = malloc(sizeof(calqueue_node));
-	new_node->timestamp = timestamp;
-	new_node->payload = payload;
+	// Reset pointers
 	new_node->next = NULL;
 
 	// Calculate the number of the bucket in which to place the new entry
@@ -300,7 +296,28 @@ void *calqueue_get(void) {
 		return NULL;
 	}
 
-	payload = node->payload;
-	free(node);
+	payload = &node->payload;
 	return payload;
+}
+
+
+
+void calqueue_free(void *ptr) {
+	calqueue_node *node;
+
+	node = container_of(ptr, calqueue_node, payload);
+
+	free(node);
+}
+
+void calqueue_insert(double timestamp, void *payload, size_t size) {
+	calqueue_node *new_node;
+
+	// Fill the node entry
+	new_node = malloc(sizeof(calqueue_node) + size);
+	new_node->timestamp = timestamp;
+	new_node->next = NULL;
+	memcpy(&new_node->payload, payload, size);
+
+	calqueue_put(timestamp, new_node);
 }
