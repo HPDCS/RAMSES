@@ -9,26 +9,23 @@
 #include <numerical.h>
 #include <dymelor.h>
 
+#include "statistics.h"
+
 static timer simulation_start;
 static timer simulation_stop;
 
 static init_f agent_initialization;
 static init_f region_initialization;
 
-extern double fwd_time, rev_time;
+////////////////////////////
+/*extern int fwd_time, rev_time;
 extern unsigned int fwd_count, rev_count;
 
-////////////////////////////
-extern unsigned int countb;
-extern unsigned int countw;
-extern unsigned int countl;
-extern unsigned int countq;
-
-extern double reverse_generation_time;
-extern double reverse_execution_time;
+extern int reverse_generation_time;
+extern int reverse_execution_time;
 
 extern unsigned int reverse_block_generated;
-extern unsigned int reverse_block_executed;
+extern unsigned int reverse_block_executed;*/
 ////////////////////////////
 
 static void process_init_event(void) {
@@ -67,9 +64,6 @@ void init(void) {
 
 	states = malloc(sizeof(void *) * (region_c + agent_c));
 	can_stop = malloc(sizeof(bool) * region_c);
-
-	// DEBUG
-	fwd_time = rev_time = 0;
 
 #ifndef NO_DYMELOR
 	dymelor_init();
@@ -246,19 +240,20 @@ void StartSimulation(unsigned short int app_n_thr) {
 		}
 	}
 
+	// Statistics
+	init_stats();
+
 	// Start timer
 	timer_start(simulation_start);
 
 	//Child thread
-	printf("Starting slave threads... ");
+	printf("Starting slave threads...\n");
 	for (i = 0; i < app_n_thr - 1; i++) {
 		if ((ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0) {
 			fprintf(stderr, "%s\n", strerror(errno));
 			abort();
 		}
-		printf("%d ", i+1);
 	}
-	printf("done\n");
 
 	//Main thread
 	thread_loop();
@@ -267,17 +262,22 @@ void StartSimulation(unsigned short int app_n_thr) {
 		pthread_join(p_tid[i], NULL);
 	}
 
+	stats report;
+	gather_stats(&report);
+
 	printf("======================================\n");
 	printf("Simulation finished\n");
-	printf("Overall time elapsed: %ld msec\n", timer_diff_micro(simulation_start, simulation_stop) / 1000);
+	printf("Overall time elapsed: %.3f msec\n", ((double)timer_value_micro(simulation_start) / 1000));
 	printf("%d Safe attempts\n%d Unsafe attempts\n%d Rollback\n\n", safe, unsafe, rollbacks);
 	
-	printf("Time processing safe events: %.3f usec on %d events (%.3f usec per event)\n", fwd_time, fwd_count, fwd_time/fwd_count);
-	printf("Time executing undo blocks : %.3f usec on %d reversible events (%.3f usec per event)\n\n", rev_time, rev_count, rev_time/rev_count);
+	printf("Time processing safe events      : %.3f msec on %d events (%.3f usec per event)\n", report.safe_time, report.safe_count, report.safe_time/report.safe_count);
+	printf("Time processing reversible events: %.3f msec on %d reversible events (%.3f usec per event)\n\n", report.rev_time, report.rev_count, report.rev_time/report.rev_count);
 	
-	printf("Time to generate a reverse_undo_block = %.3f usec on %d blocks generated (%.3f usec per block)\n", reverse_generation_time, reverse_block_generated, reverse_generation_time/reverse_block_generated);
-	printf("Time to execute a reverse_undo_block = %.3f usec on %d blocks executed (%.3f usec per block)\n", reverse_execution_time, reverse_block_executed, reverse_execution_time/reverse_block_executed);
-	//printf("movb = %d\nmovw = %d\nmovl = %d\nmovq = %d\n", countb, countw, countl, countq);
+	printf("Time to generate a reverse_undo_block: %.3f msec on %d blocks generated (%.3f usec per block)\n", report.gen_time, report.gen_count, report.gen_time/report.gen_count);
+	printf("Time to execute a reverse_undo_block : %.3f msec on %d blocks executed (%.3f usec per block)\n\n", report.exe_time, report.exe_count, report.exe_time/report.exe_count);
+
+	printf("Mean undo event size: ~%d bytes\n", (report.gen_count / unsafe * 4));
+	printf("Reverse window size: %d bytes\n", report.reverse_window_size);
 	printf("======================================\n");
 
 }

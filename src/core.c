@@ -258,7 +258,7 @@ void thread_loop(void) {
 #endif
 
 	window = create_new_revwin(0);
-	printf("window is at %p\n", window);
+	//printf("[%d] :: window is at %p; start address is at %p pointer is at %p\n", tid, window, window->address, window->pointer);
 
 	while (!stop && !sim_error) {
 

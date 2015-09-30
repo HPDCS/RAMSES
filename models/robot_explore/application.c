@@ -100,7 +100,7 @@ void *region_init(unsigned int id) {
 	for (i = 0; i < CELL_EDGES; i++) {
 		if (Random() < OBSTACLE_PROB) {
 			SET_BIT_AT(state->obstacles, i);
-			printf("Region %d has an obstacle in direction %s\n", id, direction_name(i));
+		//	printf("Region %d has an obstacle in direction %s\n", id, direction_name(i));
 		}
 	}
 
@@ -193,9 +193,9 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 //      printf("AGENT %d::", agent_id);
 //      printf("Visited %d cells over %d\n", agent->visited_cells, number_of_regions);
 
-	if ((agent->visited_cells % 50) == 0) {
+	/*if ((agent->visited_cells % 50) == 0) {
 		printf("AGENT %d:: visited %d regions so far\n", agent_id, agent->visited_cells);
-	}
+	}*/
 	// Checks whether the cell represents robot's final target,
 	// otherwise continue randomly
 	if (agent->target_cell == region_id) {
@@ -318,7 +318,7 @@ static void print_result() {
 	for (agent_id = 0; agent_id < number_of_agents; agent_id++) {
 		agent = GetAgentState(agent_id);
 
-		printf("Robot %d: %.02f\% (%d / %d regions) --- %d meetings so far --- currently in cell %d\n", agent_id, (double)agent->visited_cells / number_of_regions * 100, agent->visited_cells, number_of_regions, agent->met_robots, agent->current_cell);
+	//	printf("Robot %d: %.02f\% (%d / %d regions) --- %d meetings so far --- currently in cell %d\n", agent_id, (double)agent->visited_cells / number_of_regions * 100, agent->visited_cells, number_of_regions, agent->met_robots, agent->current_cell);
 	}
 }
 
@@ -340,7 +340,7 @@ int main(int argc, char **argv) {
 	// Setup the topology
 	UseTopology(TOPOLOGY_SQUARE);
 
-	print_topology_map();
+	//print_topology_map();
 
 	// Setup of the simulation model
 	Setup(number_of_agents, agent_init, number_of_regions, region_init);

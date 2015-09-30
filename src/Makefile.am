@@ -14,7 +14,8 @@ libabm_a_SOURCES =	api.c \
 			message.c \
 			topology.c \
 			reverse.c \
-			function_map.c
+			function_map.c \
+			statistics.c
 
 libabm_mm_a_SOURCES = 	allocator.c \
 			dymelor.c \

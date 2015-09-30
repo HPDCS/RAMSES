@@ -3,7 +3,7 @@
 
 #include <sys/types.h>
 
-#define REVERSE_WIN_SIZE 1024 * 1024 * 50	//! Defalut size of the reverse window which will contain the reverse code
+#define REVERSE_WIN_SIZE 1024 * 50	//! Defalut size of the reverse window which will contain the reverse code
 #define HMAP_SIZE		32768	//! Default size ot the address hash map to handle colliding mov addresses
 
 #define HMAP_INDEX_MASK		0xffffffc0	//! Most significant 10 bits are used to index quad-word which contains address bit
@@ -11,6 +11,8 @@
 #define HMAP_OFF_MASK_SIZE	6
 
 #define EMULATED_STACK_SIZE 1024	//! Default size of the emultated reverse stack window on the heap space
+
+#define RANDOMIZE_REVWIN 1
 
 typedef struct _revwin {
 	int size;		//! The actual size of the reverse window
