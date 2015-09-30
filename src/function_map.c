@@ -7,6 +7,8 @@
 
 #include <timer.h>
 
+#include "statistics.h"
+
 typedef struct _fmap {
 	void *original_address;
 	void *instrumented_address;
@@ -18,8 +20,8 @@ static int num_functions;
 
 
 // Statics on event processing
-double fwd_time = 0.0, rev_time = 0.0;
-unsigned int rev_count = 0, fwd_count = 0;
+__thread int safe_time = 0, rev_time = 0;
+__thread unsigned int rev_count = 0, safe_count = 0;
 
 void initialize_map(int argc, char **argv, char **envp) {
 	char *prog_name;
@@ -150,10 +152,12 @@ void call_instrumented_function(msg_t * m) {
  do_call:
  	timer_start(event_timer);
 	call_it(function, m);
-	double elapsed = timer_value_micro(event_timer);
+	double elapsed = (double)timer_value_micro(event_timer);
+	stat_post(tid, STAT_REV_TIME, elapsed);
+	stat_post(tid, STAT_UNDO_MEAN_SIZE, 0);
 
-	rev_time += elapsed;
-	rev_count++;
+	//rev_time[tid] += elapsed;
+	//rev_count[tid]++;
 }
 
 void call_regular_function(msg_t * m) {
@@ -173,8 +177,9 @@ void call_regular_function(msg_t * m) {
 
 	timer_start(event_timer);
 	call_it(function, m);
-	double elapsed = timer_value_micro(event_timer);
+	double elapsed = (double)timer_value_micro(event_timer);
+	stat_post(tid, STAT_SAFE_TIME, elapsed);
 
-	fwd_time += elapsed;
-	fwd_count++;
+	//safe_time[tid] += elapsed;
+	//safe_count[tid]++;
 }
