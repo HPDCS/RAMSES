@@ -100,7 +100,7 @@ void *region_init(unsigned int id) {
 	for (i = 0; i < CELL_EDGES; i++) {
 		if (Random() < OBSTACLE_PROB) {
 			SET_BIT_AT(state->obstacles, i);
-			printf("Region %d has an obstacle in direction %s\n", id, direction_name(i));
+		//	printf("Region %d has an obstacle in direction %s\n", id, direction_name(i));
 		}
 	}
 
@@ -193,9 +193,9 @@ void region_interaction(unsigned int region_id, unsigned int agent_id, simtime_t
 //      printf("AGENT %d::", agent_id);
 //      printf("Visited %d cells over %d\n", agent->visited_cells, number_of_regions);
 
-	if ((agent->visited_cells % 50) == 0) {
+	/*if ((agent->visited_cells % 50) == 0) {
 		printf("AGENT %d:: visited %d regions so far\n", agent_id, agent->visited_cells);
-	}
+	}*/
 	// Checks whether the cell represents robot's final target,
 	// otherwise continue randomly
 	if (agent->target_cell == region_id) {
@@ -310,23 +310,6 @@ void update_region(unsigned int region_id, simtime_t now, void *args, size_t siz
 	EnvironmentUpdate(region_id, step_time, update_region, NULL, 0);
 }
 
-/**
- * It represents the callback invoked by the simulation platform whenever a new
- * movement event has to be processed.
- *
- * @param agent_id The agent's id which is going to move
- * @param region_id The destination region's id the agent would reach
- * @param time Current simulation time
- * @param args Pointer to a arguments vector
- * @param size Size (in bytes) of the arguments vector
- */
-void move(unsigned int agent_id, unsigned int region_id, simtime_t time, void *args, size_t size) {
-	cell_state_type *region;	// Target region's state
-	cell_state_type *current;	// Current position of the agent
-	agent_state_type *agent;	// Current agent's state
-	simtime_t step_time;
-
-}
 
 static void print_result() {
 	unsigned int agent_id;
@@ -335,7 +318,7 @@ static void print_result() {
 	for (agent_id = 0; agent_id < number_of_agents; agent_id++) {
 		agent = GetAgentState(agent_id);
 
-		printf("Robot %d: %.02f percent (%d / %d regions) --- %d meetings so far --- currently in cell %d\n", agent_id, (double)agent->visited_cells / number_of_regions * 100, agent->visited_cells, number_of_regions, agent->met_robots, agent->current_cell);
+	//	printf("Robot %d: %.02f\% (%d / %d regions) --- %d meetings so far --- currently in cell %d\n", agent_id, (double)agent->visited_cells / number_of_regions * 100, agent->visited_cells, number_of_regions, agent->met_robots, agent->current_cell);
 	}
 }
 
@@ -349,13 +332,15 @@ int main(int argc, char **argv) {
 		number_of_threads = atoi(argv[1]);
 		number_of_agents = atoi(argv[2]);
 		number_of_regions = atoi(argv[3]);
+	} else {
+		fprintf(stderr, "Usage: %s <num_threads> <num_agents> <num_regions>\n", argv[0]);
+		exit(EXIT_FAILURE);
 	}
-//      printf("APP :: main\n");
 
 	// Setup the topology
 	UseTopology(TOPOLOGY_SQUARE);
 
-	print_topology_map();
+	//print_topology_map();
 
 	// Setup of the simulation model
 	Setup(number_of_agents, agent_init, number_of_regions, region_init);

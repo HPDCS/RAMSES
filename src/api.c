@@ -9,13 +9,24 @@
 #include <numerical.h>
 #include <dymelor.h>
 
+#include "statistics.h"
+
 static timer simulation_start;
 static timer simulation_stop;
 
 static init_f agent_initialization;
 static init_f region_initialization;
 
+////////////////////////////
+/*extern int fwd_time, rev_time;
+extern unsigned int fwd_count, rev_count;
 
+extern int reverse_generation_time;
+extern int reverse_execution_time;
+
+extern unsigned int reverse_block_generated;
+extern unsigned int reverse_block_executed;*/
+////////////////////////////
 
 static void process_init_event(void) {
 	unsigned int index;
@@ -63,7 +74,7 @@ void init(void) {
 	
 	processing = malloc(sizeof(simtime_t) * n_cores);
 	wait_time = malloc(sizeof(simtime_t) * region_c);
-	wait_who = malloc(sizeof(simtime_t) * region_c);
+	wait_who = malloc(sizeof(int) * region_c);
 	waiting_time_lock = malloc(sizeof(int) * region_c);
 	region_lock = malloc(sizeof(int) * region_c);
 
@@ -72,12 +83,10 @@ void init(void) {
 	}
 
 	for (i = 0; i < region_c; i++) {
-		wait_time[i] = INFTY;
-	}
-
-	for (i = 0; i < region_c; i++) {
 		waiting_time_lock[i] = 0;
-		wait_who[i] = 0;
+		region_lock[i] = 0;
+		wait_time[i] = INFTY;
+		wait_who[i] = n_cores;
 	}
 
 }
@@ -87,8 +96,9 @@ void InitialPosition(unsigned int region) {
 
 //	printf("INFO: agent %d set in region %d\n", current_lp, region);
 
+	// NOTE:
 	// At this time, current_lp holds the current agent that is
-	// being initialized dureing the setup phase.
+	// being initialized during the setup phase.
 	agent_position[current_lp] = region;
 	presence_matrix[region][current_lp] = true;
 }
@@ -213,19 +223,37 @@ void StartSimulation(unsigned short int app_n_thr) {
 
 	n_cores = app_n_thr;
 
+	// Final initialization of processes
+	init();
+	// TODO: da integrare process_init_event() in init()
+	process_init_event();
+
+	printf("INFO: Setting up regions and agents...\n");
+
+	// TODO: da integrare in process_init_event()
+	// Check whether agents' position has been properly initialized by InitialPosition invocation
+	for (i = 0; i < agent_c; i++) {
+		if (agent_position[i] == UINT_MAX) {
+			// Agent has no position set up, discard it
+			rootsim_error(false, "Agent %d has no initial position set up; it will be disposed\n");
+			states[i] = NULL;	// TODO: da stabilire come procedere
+		}
+	}
+
+	// Statistics
+	init_stats();
+
 	// Start timer
 	timer_start(simulation_start);
 
 	//Child thread
-	printf("Starting slave threads... ");
+	printf("Starting slave threads...\n");
 	for (i = 0; i < app_n_thr - 1; i++) {
 		if ((ret = pthread_create(&p_tid[i], NULL, start_thread, NULL)) != 0) {
 			fprintf(stderr, "%s\n", strerror(errno));
 			abort();
 		}
-		printf("%d ", i+1);
 	}
-	printf("done\n");
 
 	//Main thread
 	thread_loop();
@@ -234,11 +262,24 @@ void StartSimulation(unsigned short int app_n_thr) {
 		pthread_join(p_tid[i], NULL);
 	}
 
+	stats report;
+	gather_stats(&report);
+
 	printf("======================================\n");
 	printf("Simulation finished\n");
-	printf("Overall time elapsed: %ld msec\n", timer_diff_micro(simulation_start, simulation_stop) / 1000);
-	printf("%d Safe events\n%d Unsafe event\n%d Rolled back events\n", safe, unsafe, rollbacks);
+	printf("Overall time elapsed: %.3f msec\n", ((double)timer_value_micro(simulation_start) / 1000));
+	printf("%d Safe attempts\n%d Unsafe attempts\n%d Rollback\n\n", safe, unsafe, rollbacks);
+	
+	printf("Time processing safe events      : %.3f msec on %d events (%.3f usec per event)\n", report.safe_time, report.safe_count, report.safe_time/report.safe_count);
+	printf("Time processing reversible events: %.3f msec on %d reversible events (%.3f usec per event)\n\n", report.rev_time, report.rev_count, report.rev_time/report.rev_count);
+	
+	printf("Time to generate a reverse_undo_block: %.3f msec on %d blocks generated (%.3f usec per block)\n", report.gen_time, report.gen_count, report.gen_time/report.gen_count);
+	printf("Time to execute a reverse_undo_block : %.3f msec on %d blocks executed (%.3f usec per block)\n\n", report.exe_time, report.exe_count, report.exe_time/report.exe_count);
+
+	printf("Mean undo event size: ~%d bytes\n", (report.gen_count / unsafe * 4));
+	printf("Reverse window size: %d bytes\n", report.reverse_window_size);
 	printf("======================================\n");
+
 }
 
 void StopSimulation(void) {
@@ -290,18 +331,20 @@ void Setup(unsigned int agentc, init_f agent_init, unsigned int regionc, init_f 
 	region_initialization = region_init;
 	agent_initialization = agent_init;
 
-	init();
-	process_init_event();
+	// init();
+	// // TODO: da integrare process_init_event() in init()
+	// process_init_event();
 
-	printf("INFO: Setting up regions and agents...\n");
+	// printf("INFO: Setting up regions and agents...\n");
 
-	// Check whether agents' position has been properly initialized by InitialPosition invocation
-	for (i = 0; i < agent_c; i++) {
-		if (agent_position[i] == UINT_MAX) {
-			// Agent has no position set up, discard it
-			rootsim_error(false, "Agent %d has no initial position set up; it will be disposed\n");
-			states[i] = NULL;	// TODO: da stabilire come procedere
-		}
-	}
+	// // TODO: da integrare in process_init_event()
+	// // Check whether agents' position has been properly initialized by InitialPosition invocation
+	// for (i = 0; i < agent_c; i++) {
+	// 	if (agent_position[i] == UINT_MAX) {
+	// 		// Agent has no position set up, discard it
+	// 		rootsim_error(false, "Agent %d has no initial position set up; it will be disposed\n");
+	// 		states[i] = NULL;	// TODO: da stabilire come procedere
+	// 	}
+	// }
 
 }

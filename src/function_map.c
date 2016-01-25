@@ -5,6 +5,10 @@
 #include <core.h>
 #include <function_map.h>
 
+#include <timer.h>
+
+#include "statistics.h"
+
 typedef struct _fmap {
 	void *original_address;
 	void *instrumented_address;
@@ -13,6 +17,11 @@ typedef struct _fmap {
 
 static fmap *function_map;
 static int num_functions;
+
+
+// Statics on event processing
+__thread int safe_time = 0, rev_time = 0;
+__thread unsigned int rev_count = 0, safe_count = 0;
 
 void initialize_map(int argc, char **argv, char **envp) {
 	char *prog_name;
@@ -66,7 +75,7 @@ void initialize_map(int argc, char **argv, char **envp) {
 
 	// Get non-instrumented addresses
 	for (i = 0; i < num_functions; i++) {
-		snprintf(buff, 1024, "readelf -a %s | grep FUNC | grep -v UND | grep -v \"_reverse\" | grep %s > dump", prog_name, function_map[i].function_name);
+		snprintf(buff, 1024, "readelf -Wa %s | grep FUNC | grep -v UND | grep -v \"_reverse\" | grep %s > dump", prog_name, function_map[i].function_name);
 		system(buff);
 		f = fopen("dump", "r");
 		if (fgets(buff, 1024, f) == NULL) {
@@ -77,7 +86,8 @@ void initialize_map(int argc, char **argv, char **envp) {
 		function_map[i].original_address = (void *)address;
 		fclose(f);
 		printf("Function %s: original address: %p instrumented address: %p\n", function_map[i].function_name, function_map[i].original_address, function_map[i].instrumented_address);
-	} unlink("dump");
+	}
+	unlink("dump");
 	printf("----------------COMPLETE-----------------\n");
 }
 
@@ -114,6 +124,9 @@ static void call_it(void *f, msg_t * m) {
 void call_instrumented_function(msg_t * m) {
 	void *function = NULL;
 	int i;
+
+	timer event_timer;
+
 	if (m->interaction != NULL) {
 		function = m->interaction;
 	} else if (m->update != NULL) {
@@ -123,7 +136,7 @@ void call_instrumented_function(msg_t * m) {
 		printf("Event type = %d\n", m->type);
 		exit(EXIT_FAILURE);
 	}
-	log_info(NC, "Finding function at address '%p'\n", function);
+	//log_info(NC, "Finding function at address '%p'\n", function);
 
 	// Find the instrumented function
 	for (i = 0; i < num_functions; i++) {
@@ -132,15 +145,26 @@ void call_instrumented_function(msg_t * m) {
 			goto do_call;
 		}
 	}
-	printf("Function at address '%p' does not found!!\n", function);
+	printf("Function at address '%p' not found!!\n", function);
 	fprintf(stderr, "%s:%d: Runtime error\n", __FILE__, __LINE__);
-	exit(EXIT_FAILURE);
+	abort();
+
  do_call:
+ 	timer_start(event_timer);
 	call_it(function, m);
+	double elapsed = (double)timer_value_micro(event_timer);
+	stat_post(tid, STAT_REV_TIME, elapsed);
+	stat_post(tid, STAT_UNDO_MEAN_SIZE, 0);
+
+	//rev_time[tid] += elapsed;
+	//rev_count[tid]++;
 }
 
 void call_regular_function(msg_t * m) {
 	void *function = NULL;
+
+	timer event_timer;
+
 	if (m->interaction != NULL) {
 		function = m->interaction;
 	} else if (m->update != NULL) {
@@ -150,5 +174,12 @@ void call_regular_function(msg_t * m) {
 		printf("Unable to find function at address %p\n", function);
 		exit(EXIT_FAILURE);
 	}
+
+	timer_start(event_timer);
 	call_it(function, m);
+	double elapsed = (double)timer_value_micro(event_timer);
+	stat_post(tid, STAT_SAFE_TIME, elapsed);
+
+	//safe_time[tid] += elapsed;
+	//safe_count[tid]++;
 }
